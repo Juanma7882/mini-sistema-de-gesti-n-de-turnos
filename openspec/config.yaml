@@ -5,7 +5,7 @@ context: |
   Deadline: sábado 12/09/2026 22:30. No se espera dedicación full; priorizar.
   Backend: ASP.NET Core Web API, C# / .NET 9, capas ligeras
   (Domain/Application/Infrastructure/Api). Deploy en Railway (Dockerfile).
-  Frontend: React + TypeScript (Vite). Deploy en Vercel.
+  Frontend: React + TypeScript (Vite), Tailwind CSS + shadcn/ui. Deploy en Vercel.
   BD: SQLite con EF Core + migraciones (en Railway montar volume para el .db).
   Auth: JWT propio (sin ASP.NET Identity), hash BCrypt, usuarios sembrados
   (admin + profesional), token corto sin refresh.

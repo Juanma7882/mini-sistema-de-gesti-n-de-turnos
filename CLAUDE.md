@@ -35,7 +35,8 @@
 - **Lenguaje principal:** C# — **.NET 9** (SDK 9.0.307).
 - **Backend:** ASP.NET Core Web API, arquitectura por capas ligera
   (Domain / Application / Infrastructure / Api). Deploy en **Railway** (Dockerfile).
-- **Frontend:** **React + TypeScript** (Vite). Deploy en **Vercel**.
+- **Frontend:** **React + TypeScript** (Vite). Estilos con **Tailwind CSS** +
+  componentes **shadcn/ui** (CLI, componentes copiados al repo). Deploy en **Vercel**.
 - **Persistencia:** **SQLite** con EF Core + migraciones.
   ⚠️ En Railway montar un **volume** y apuntar la ruta del `.db` ahí por env var
   (`ConnectionStrings__Default`); el filesystem es efímero sin volume.
