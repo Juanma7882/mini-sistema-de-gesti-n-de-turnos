@@ -21,12 +21,12 @@ deploy/CI. Tareas de máx. ~2 h. El rol **Paciente** NO entra acá (ver
 
 ## 2. Domain
 
-- [ ] 2.1 Entidades: `Paciente`, `Profesional` (con `CreatedAt`, `DeletedAt?`).
-- [ ] 2.2 Entidad `Usuario` (`Email` único, `PasswordHash`, `Rol`, `ProfesionalId?`) y enum `Rol { Admin, Profesional }`.
-- [ ] 2.3 Entidad `Turno` (`PacienteId`, `ProfesionalId`, `Inicio` `DateTime`, `Estado`, `Notas?`, `CreatedAt`, `UpdatedAt`) y enum `EstadoTurno { Pendiente=0, Confirmado=1, Cancelado=2, Atendido=3 }`.
-- [ ] 2.4 Entidad `RefreshToken` (`UsuarioId`, `TokenHash` SHA-256, `ExpiresAt`, `RevokedAt?`, `ReplacedByHash?`).
-- [ ] 2.5 Máquina de estados: función pura `TransicionesLegales(EstadoTurno)` + `EsTransicionValida(desde, hacia)`. `Cancelado` y `Atendido` terminales.
-- [ ] 2.6 Tests unitarios de la máquina de estados (todas las flechas legales e ilegales).
+- [x] 2.1 Entidades: `Paciente`, `Profesional` (con `CreatedAt`, `DeletedAt?`).
+- [x] 2.2 Entidad `Usuario` (`Email` único, `PasswordHash`, `Rol`, `ProfesionalId?`) y enum `Rol { Admin, Profesional }`.
+- [x] 2.3 Entidad `Turno` (`PacienteId`, `ProfesionalId`, `Inicio` `DateTime`, `Estado`, `Notas?`, `CreatedAt`, `UpdatedAt`) y enum `EstadoTurno { Pendiente=0, Confirmado=1, Cancelado=2, Atendido=3 }`.
+- [x] 2.4 Entidad `RefreshToken` (`UsuarioId`, `TokenHash` SHA-256, `ExpiresAt`, `RevokedAt?`, `ReplacedByHash?`).
+- [x] 2.5 Máquina de estados: función pura `TransicionesLegales(EstadoTurno)` + `EsTransicionValida(desde, hacia)`. `Cancelado` y `Atendido` terminales.
+- [x] 2.6 Tests unitarios de la máquina de estados (todas las flechas legales e ilegales).
 
 ## 3. Infrastructure — persistencia
 
