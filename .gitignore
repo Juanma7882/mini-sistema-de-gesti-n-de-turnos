@@ -1,29 +1,81 @@
-# .NET
+# ─────────────────────────────────────────────────────────────
+# Backend — ASP.NET Core / .NET 9 (solución en backend/Turnos.sln)
+# El frontend tiene su propio frontend/.gitignore
+# ─────────────────────────────────────────────────────────────
+
+# Build output
 bin/
 obj/
 out/
-*.user
-*.suo
-.vs/
+publish/
+[Dd]ebug/
+[Rr]elease/
+[Ll]ogs/
+artifacts/
 
-# Rider / VS Code
-.idea/
+# Visual Studio / Rider / VS Code
+.vs/
 .vscode/*
 !.vscode/settings.json
 !.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
 
-# Build / test
+# .NET tooling
+project.lock.json
+*.nuget.props
+*.nuget.targets
+.dotnet/
+msbuild.log
+msbuild.err
+msbuild.wrn
+
+# Tests / cobertura
 [Tt]est[Rr]esults/
 *.trx
-coverage/
 *.coverage
 *.coveragexml
+coverage/
+coverage*.json
+coverage*.xml
+coverage*.info
+BenchmarkDotNet.Artifacts/
 
-# Secrets / local
+# ─────────────────────────────────────────────────────────────
+# Secretos y config local (NO commitear)
+# appsettings.json va al repo con claves vacías / placeholder
+# ─────────────────────────────────────────────────────────────
+appsettings.Development.json
 appsettings.*.local.json
+appsettings.Production.json
+secrets.json
 *.env
 .env
+.env.*
+!.env.example
+
+# ─────────────────────────────────────────────────────────────
+# Base de datos SQLite (local + volume de deploy)
+# ─────────────────────────────────────────────────────────────
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+data/
+
+# Certificados / llaves
+*.pfx
+*.p12
+*.key
+*.pem
 
 # OS
 Thumbs.db
+Desktop.ini
 .DS_Store
