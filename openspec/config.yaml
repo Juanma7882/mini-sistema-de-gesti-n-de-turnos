@@ -1,11 +1,23 @@
 schema: spec-driven
 
 context: |
-  Prueba técnica con entrega en 48 h.
-  Tech stack: C# / .NET 9, xUnit + FluentAssertions para tests.
-  Layout: un .sln en raíz, código en src/, tests en tests/.
-  Conventional commits, mensajes en imperativo.
-  Consigna oficial de la prueba: pendiente de definir.
+  Prueba técnica MAE Software — mini sistema de gestión de turnos de una clínica.
+  Deadline: sábado 12/09/2026 22:30. No se espera dedicación full; priorizar.
+  Backend: ASP.NET Core Web API, C# / .NET 9, capas ligeras
+  (Domain/Application/Infrastructure/Api). Deploy en Railway (Dockerfile).
+  Frontend: React + TypeScript (Vite). Deploy en Vercel.
+  BD: SQLite con EF Core + migraciones (en Railway montar volume para el .db).
+  Auth: JWT propio (sin ASP.NET Identity), hash BCrypt, usuarios sembrados
+  (admin + profesional), token corto sin refresh.
+  Tests: xUnit + FluentAssertions. CI: GitHub Actions (build + test).
+  Layout: .sln en raíz, código en src/, tests en tests/, SPA en frontend/.
+  Conventional commits, mensajes en imperativo. PROMPTS.md vivo (entregable 6).
+  Requisitos: CRUD pacientes (nombre+apellido, teléfono, obra social) y
+  profesionales (nombre+apellido, especialidad); turnos (paciente, profesional,
+  fecha, horario, estado) con listado y edición; estados Pendiente/Confirmado/
+  Cancelado/Atendido; un profesional no puede tener dos turnos en misma fecha y
+  horario (cancelado libera slot); roles Administrador (todo) y Profesional
+  (solo sus turnos). Datos de demo ficticios.
 
 rules:
   proposal:
