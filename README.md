@@ -355,16 +355,17 @@ _Se detallan al implementar._ Resumen:
 ## Estructura del proyecto ⚠️
 
 ```
-├── src/
-│   ├── Domain/            entidades, enums, reglas de negocio puras
-│   ├── Application/        casos de uso, validaciones, DTOs, interfaces
-│   ├── Infrastructure/     EF Core, DbContext, migraciones, repos, JWT, BCrypt
-│   └── Api/                controllers/endpoints, middleware, DI, seed
-├── tests/
-│   └── *.Tests/            xUnit (regla anti doble-turno, transiciones, integración)
-├── frontend/               React + TS + Vite + Tailwind + shadcn/ui
-├── Dockerfile              build del backend para Railway
-└── .github/workflows/      CI (build + test)
+├── backend/                    .NET 9 — solución Turnos.sln
+│   ├── src/
+│   │   ├── Domain/             entidades, enums, reglas de negocio puras
+│   │   ├── Application/        casos de uso, validaciones, DTOs, interfaces
+│   │   ├── Infrastructure/     EF Core, DbContext, migraciones, repos, JWT, BCrypt
+│   │   └── Api/                controllers/endpoints, middleware, DI, seed
+│   └── tests/
+│       └── *.Tests/            xUnit (regla anti doble-turno, transiciones, integración)
+├── frontend/                   React + TS + Vite + Tailwind + shadcn/ui
+├── Dockerfile                  build del backend para Railway
+└── .github/workflows/          CI (build + test)
 ```
 
 ---
