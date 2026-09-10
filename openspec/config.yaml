@@ -1,5 +1,20 @@
 schema: spec-driven
 
+context: |
+  Prueba técnica con entrega en 48 h.
+  Tech stack: C# / .NET 9, xUnit + FluentAssertions para tests.
+  Layout: un .sln en raíz, código en src/, tests en tests/.
+  Conventional commits, mensajes en imperativo.
+  Consigna oficial de la prueba: pendiente de definir.
+
+rules:
+  proposal:
+    - Priorizar alcance mínimo entregable; marcar explícitamente los Non-goals.
+    - Cada propuesta debe estimar horas y encajar en el presupuesto de 48 h.
+  tasks:
+    - Dividir en tareas de máximo 2 h.
+    - Ordenar por camino crítico (compila y corre antes que features opcionales).
+
 # Project context (optional)
 # This is shown to AI when creating artifacts.
 # Add your tech stack, conventions, style guides, domain knowledge, etc.
