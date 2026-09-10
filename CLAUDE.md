@@ -59,6 +59,9 @@
 - Nullable reference types habilitado; warnings as errors en `Directory.Build.props`.
 - Commits pequeños y atómicos; mensaje en imperativo (conventional commits).
 - `dotnet format` antes de cada commit; ESLint + Prettier en el frontend.
+- **Imports siempre relativos** en el código de aplicación (sin alias `@/*`).
+  Los componentes vendored de shadcn en `components/ui/` quedan como los genera
+  el CLI salvo que se decida reescribirlos.
 - Cada feature entra por el ciclo OpenSpec: `/opsx:explore` → `/opsx:propose`
   → `/opsx:apply` → `/opsx:archive`.
 - **`PROMPTS.md` vivo desde el minuto cero** (requisito 6 de la entrega).
