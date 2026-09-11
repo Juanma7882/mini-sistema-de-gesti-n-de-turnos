@@ -1,21 +1,20 @@
 ## 1. Sistema visual base
 
-- [ ] 1.1 Instalar `@fontsource/manrope` (pesos 400/500/600/700) e importarlo en `src/main.tsx` o `styles/index.css`; definir la familia y `font-display: swap`.
-- [ ] 1.2 Reescribir el bloque `@theme` de `src/styles/index.css` con la paleta rosa pastel + blanco (`--color-canvas`, `--color-surface`, `--color-primary`, `--color-primary-strong`, `--color-primary-tint`, `--color-foreground`, `--color-muted-foreground`, `--color-border`, `--color-ring`, `--color-destructive`); actualizar `body` para usar `--color-canvas` / `--color-foreground`.
-- [ ] 1.3 Definir escala tipográfica (título login, título página, título diálogo, cuerpo 14px, label/meta, header de tabla) y utilidad de `tabular-nums`; sin `text-transform: uppercase` en labels.
-- [ ] 1.4 Definir radios (`10px` cards/inputs/diálogos, `8px` botones, `6px` badges) y una única sombra de overlay con tinte rosa como tokens.
-- [ ] 1.5 `pnpm dlx shadcn@latest init` con los tokens propios como base; mapear las variables de shadcn a los tokens en `styles/index.css`.
-- [ ] 1.6 Agregar los componentes de shadcn a `src/shared/components/ui/`: `button input select dialog sheet table badge sonner form label dropdown-menu calendar popover command textarea skeleton alert`; reescribir imports `@/` a relativos.
-- [ ] 1.7 Verificar `pnpm typecheck && pnpm lint && pnpm build` en verde tras el init.
+- [x] 1.1 Instalar `@fontsource/manrope` (pesos 400/500/600/700) e importarlo en `src/main.tsx` o `styles/index.css`; definir la familia y `font-display: swap`.
+- [x] 1.2 Reescribir el bloque `@theme` de `src/styles/index.css` con la paleta rosa pastel + blanco (`--color-canvas`, `--color-surface`, `--color-primary`, `--color-primary-strong`, `--color-primary-tint`, `--color-foreground`, `--color-muted-foreground`, `--color-border`, `--color-ring`, `--color-destructive`); actualizar `body` para usar `--color-canvas` / `--color-foreground`.
+- [ ] 1.3 Definir escala tipográfica formal (título login, título página, título diálogo, cuerpo 14px, label/meta, header de tabla) — hoy los tamaños se eligen ad-hoc por componente, no hay una escala documentada; `tabular-nums` sí se usa donde corresponde (Inicio de turnos).
+- [ ] 1.4 Radios: `10px` (cards/inputs/diálogos) y `6px` (badges) ya se usan consistentemente; falta unificar `8px` en botones (hoy varían entre `rounded-lg`/`rounded-md`) y no hay un único token de sombra de overlay (cada overlay define su propio `shadow-[...]` inline).
+- [~] 1.5/1.6 (cerrada por decisión, no se hace) Se intentó `pnpm dlx shadcn@latest init`: el CLI nuevo (presets Nova/Vega/..., elección Base UI/Radix/Aria) tira "Could not load the workspace config" incluso con alias `@/` temporal configurado; la versión pineada sugerida por el propio error también fallaba en runs no interactivos. Decisión con el usuario: **sin shadcn/Radix** — todo hand-rolled con Tailwind puro (`Dialog`, `ConfirmDialog`, `DataTable`, `FullScreenSpinner`, etc. en `shared/components/`), mismo patrón ya usado en el resto del proyecto. `paths`/`resolve.alias` temporales revertidos, cero rastro del intento fallido.
+- [x] 1.7 `pnpm typecheck && pnpm lint && pnpm build && pnpm test` en verde.
 
 ## 2. Componentes compartidos y de estado
 
-- [ ] 2.1 `shared/components/PageHeader.tsx`: título + slot de acción (botón primario opcional).
-- [ ] 2.2 `shared/components/DataTable.tsx`: columnas configurables, hover de fila `--color-primary-tint`, fila activable por teclado, pie de paginación (`‹ ›`, "Página X de Y"), slots de loading (skeleton) y vacío.
-- [ ] 2.3 `shared/components/EmptyState.tsx`: ícono lucide + título + acción opcional (sin emoji).
-- [ ] 2.4 `shared/components/FieldError.tsx`: ícono `alert-circle` 14px + mensaje; integrado con `useProblemForm`.
-- [ ] 2.5 `shared/components/ConfirmDialog.tsx`: ícono en círculo rosa-tint, título, cuerpo, botón destructivo + botón de cancelar.
-- [ ] 2.6 `EstadoBadge` + mapa único `EstadoTurno -> { fill, text, icon, label }` (Pendiente ámbar/`clock`, Confirmado rosa/`check`, Atendido salvia/`clipboard-check`, Cancelado gris malva/`x-circle`); consumido por tabla y drawer.
+- [x] 2.1 `shared/components/PageHeader.tsx`: título + slot de acción (botón primario opcional).
+- [ ] 2.2 (parcial) `shared/components/DataTable.tsx`: columnas configurables ✓, hover de fila `--color-primary-tint` ✓, fila activable por teclado (Enter) ✓, loading con spinner (no shimmer/skeleton de filas) — falta el pie de paginación (`‹ ›`, "Página X de Y"): todas las páginas piden `page:1` fijo, no hay UI para cambiar de página.
+- [x] 2.3 `shared/components/EmptyState.tsx`: wrapper simple; cada caller compone ícono lucide + texto + acción opcional (sin emoji) — así se usa en Turnos/Pacientes/Profesionales.
+- [x] 2.4 `shared/components/FieldError.tsx`: ícono `alert-circle` 14px + mensaje; integrado con `useProblemForm`.
+- [x] 2.5 `shared/components/ConfirmDialog.tsx`: ícono en círculo rosa-tint, título (vía `Dialog`), cuerpo, botón destructivo + botón de cancelar. Nuevo `shared/components/Dialog.tsx` genérico (overlay + Escape) reusado por `ConfirmDialog` y los tres diálogos de formulario.
+- [x] 2.6 `EstadoBadge` (`features/turnos/components/EstadoBadge.tsx`) + mapa único `EstadoTurno -> { fill, text, icon, label }` (Pendiente ámbar/`clock`, Confirmado rosa/`check-circle-2`, Atendido salvia/`clipboard-check`, Cancelado gris malva/`x-circle`); consumido por la tabla de turnos y el drawer de detalle.
 
 ## 3. Shell, feedback y páginas de error
 
@@ -40,32 +39,32 @@
 
 ## 5. Turnos — listado y detalle
 
-- [ ] 5.1 `features/turnos/pages/TurnosPage.tsx`: `PageHeader` con título contextual por rol; botón "Nuevo turno" (`plus`) solo Admin; no enviar `profesionalId` propio.
-- [ ] 5.2 `features/turnos/components/FiltrosTurnos.tsx`: rango de fechas (`popover` + `calendar`), estado (`select` con swatch), y solo Admin: profesional (`select`) y paciente (input `search` con debounce 300ms); "Limpiar filtros" (`x`) visible solo con filtros activos.
-- [ ] 5.3 Sincronizar filtros con la query string vía `shared/lib/queryString.ts`; rehidratar al recargar.
-- [ ] 5.4 Tabla de turnos sobre `DataTable`: columnas Paciente, Profesional, Inicio (`formatInicio`, `tabular-nums`), Estado (`EstadoBadge`), Notas (truncadas), `chevron-right`.
-- [ ] 5.5 Estados de la lista: skeleton (6–8 filas) mientras carga; `EmptyState` `calendar-search` "No hay turnos para estos filtros." + "Limpiar filtros"; vacío total Admin → "Todavía no hay turnos." + "Nuevo turno"; error no-500 → panel `alert-triangle` + "Reintentar".
-- [ ] 5.6 `features/turnos/components/TurnoDetailDrawer.tsx`: `sheet` derecho ~420px (full-width en mobile), refleja `?turno=<id>`; secciones Turno / Paciente (`phone` con `tel:`, `shield`) / Profesional (`stethoscope`) separadas por hairline; estado 404 → `search-x` "Este turno ya no está disponible." + "Volver al listado".
-- [ ] 5.7 Abrir el drawer desde click o Enter en la fila.
+- [x] 5.1 `features/turnos/pages/TurnosPage.tsx`: `PageHeader` con título contextual por rol; botón "Nuevo turno" (`plus`) solo Admin; no enviar `profesionalId` propio.
+- [~] 5.2 (parcial) `FiltrosTurnos.tsx`: rango de fechas con `<input type="date">` nativo (no `popover`+`calendar`, no se instaló shadcn — ver §1.5/1.6), estado (`select`, sin swatch de color en la opción), y solo Admin: profesional (`select`); "Limpiar filtros" (`x`) visible solo con filtros activos. **Falta el filtro de paciente por búsqueda**: `TurnosQuery` del backend no tiene un parámetro de texto libre, solo `pacienteId` — no se agregó un combobox de paciente solo para filtrar.
+- [x] 5.3 Filtros sincronizados a la query string (`?desde&hasta&estado&profesionalId`) vía `useSearchParams` de react-router (no se usó `queryString.ts`, que sigue reservado para armar querystrings de request); rehidratan al recargar.
+- [x] 5.4 Tabla de turnos sobre `DataTable`: columnas Paciente, Profesional (oculta para rol Profesional, ya que siempre sería su propio nombre), Inicio (`formatInicio`, `tabular-nums`), Estado (`EstadoBadge`), Notas (truncadas con `line-clamp-1`), `chevron-right`.
+- [~] 5.5 (parcial) Loading con spinner (no skeleton de 6–8 filas); `EmptyState` `calendar-search` "No hay turnos para estos filtros." + "Limpiar filtros"; vacío total → "Todavía no hay turnos." + "Nuevo turno" (solo Admin); error no-500 → panel `alert-triangle` + "Reintentar" (ver `TurnosPage`, condiciona `error.status < 500 && !== 0`; 500/red ya van por el toast global de `httpClient`).
+- [x] 5.6 `TurnoDetailDrawer.tsx`: panel derecho ~420px (`max-w-105`, full-width en mobile), refleja `?turno=<id>` (recargable); secciones Turno / Paciente (`phone` con `tel:`, `shield`) / Profesional (`stethoscope`) separadas por hairline; estado 404 → `search-x` "Este turno ya no está disponible." + "Volver al listado".
+- [x] 5.7 Abrir el drawer desde click o Enter en la fila (`DataTable` soporta `tabIndex`+`onKeyDown` cuando hay `onRowClick`).
 
 ## 6. Turnos — acciones
 
-- [ ] 6.1 `features/turnos/components/EstadoControl.tsx`: renderiza solo transiciones legales de `machine.ts` para (estado, rol); botones Confirmar `check`, Marcar atendido `clipboard-check`, Cancelar `x-circle`; sin acciones → "Sin acciones disponibles".
-- [ ] 6.2 Ejecutar `PATCH /turnos/{id}/estado`; 409 → alerta inline en el drawer con `detail`, sin cambiar el estado en la UI.
-- [ ] 6.3 `features/turnos/components/TurnoDialog.tsx` (solo Admin): combobox de paciente (`command` + `popover`, `GET /pacientes?search=`), `select` de profesional, `calendar` de fecha + selector de hora a minuto (enviar string local naïve), `textarea` de notas.
-- [ ] 6.4 `TurnoDialog` crear (`POST /turnos`) y editar (`PUT /turnos/{id}`): botón con spinner + "Guardando"; éxito → cerrar + toast (`check-circle`) + refetch.
-- [ ] 6.5 Errores del `TurnoDialog`: 409 slot ocupado → alerta `calendar-x` con `detail` arriba del cuerpo; 400 → `useProblemForm` por campo; 404 → "El paciente o profesional seleccionado ya no existe."
-- [ ] 6.6 Cancelación: `ConfirmDialog` ("El horario quedará libre para otro paciente.", botón "Sí, cancelar") → `PATCH estado="Cancelado"` → toast "Turno cancelado" + refetch (libera slot).
+- [x] 6.1 `EstadoControl.tsx`: renderiza solo transiciones legales de `machine.ts` para (estado, rol); botones Confirmar `check`, Marcar atendido `clipboard-check`, Cancelar `x-circle`; sin acciones → "Sin acciones disponibles".
+- [x] 6.2 `PATCH /turnos/{id}/estado`; 409 → alerta inline en el drawer con `detail`, sin cambiar el estado en la UI.
+- [~] 6.3 (simplificado) `TurnoDialog.tsx` (solo Admin, abierto desde "Nuevo turno" o desde "Editar turno" en el drawer): buscador de texto + `select` de paciente (sin `command`/`popover`), `select` de profesional, `<input type="date">` + `<input type="time">` en vez de `calendar` (se combinan en el string local naïve que espera el backend), `textarea` de notas.
+- [x] 6.4 Crear (`POST /turnos`) y editar (`PUT /turnos/{id}`): botón con spinner + "Guardando"; éxito → cerrar + toast + refetch.
+- [x] 6.5 Errores: 409 slot ocupado → alerta `calendar-x` con `detail`; 400 → `useProblemForm` por campo; 404 → "El paciente o profesional seleccionado ya no existe."
+- [x] 6.6 Cancelación: `ConfirmDialog` ("El horario quedará libre para otro paciente.", botón "Sí, cancelar") → `PATCH estado="Cancelado"` → toast "Turno cancelado" + refetch (libera slot). Antes el botón "Cancelar" del `EstadoControl` disparaba el cambio directo; ahora el drawer intercepta la transición `Cancelado` y pide confirmación primero.
 
 ## 7. Maestros — pacientes y profesionales
 
-- [ ] 7.1 `features/pacientes/pages/PacientesPage.tsx`: ruta bajo `RequireRole` Admin; `PageHeader` + "Nuevo paciente"; barra de búsqueda `search` con debounce 300ms; `DataTable` desde `GET /pacientes?search=&page=&pageSize=` (Nombre, Apellido, Teléfono, Obra social, Alta) + menú `more-horizontal` (Editar `pencil`, Eliminar `trash-2`).
-- [ ] 7.2 Estados vacíos de pacientes: búsqueda sin resultados → `user-search` "No encontramos pacientes con ese texto."; sin datos → `users` "Todavía no hay pacientes." + "Nuevo paciente".
-- [ ] 7.3 `features/pacientes/components/PacienteDialog.tsx`: campos Nombre, Apellido, Teléfono (`phone`), Obra social (`shield`) con `pacienteSchema`; crear `POST` / editar `PUT`; 400 → errores por campo; éxito → cerrar + toast + refetch.
-- [ ] 7.4 Eliminar paciente: `ConfirmDialog` (`trash-2`, "No podrás eliminarlo si tiene turnos activos.") → `DELETE`; 204 → toast "Paciente eliminado" + refetch; 409 → toast destructivo `alert-triangle` "Este paciente tiene turnos activos. Cancelá o reasigná esos turnos primero.".
-- [ ] 7.5 `features/profesionales/pages/ProfesionalesPage.tsx`: misma estructura reusando `DataTable` / búsqueda / menú; columnas Nombre, Apellido, Especialidad, Alta; vacío con `stethoscope`.
-- [ ] 7.6 `features/profesionales/components/ProfesionalDialog.tsx`: campos Nombre, Apellido, Especialidad (`stethoscope`) con `profesionalSchema`; crear/editar + errores por campo.
-- [ ] 7.7 Eliminar profesional: `ConfirmDialog` + `DELETE`; 409 → toast "Este profesional tiene turnos activos. Cancelá o reasigná esos turnos primero.".
+- [~] 7.1 (simplificado) `PacientesPage.tsx`: ruta ya bajo `RequireRole` Admin (`router.tsx`); `PageHeader` + "Nuevo paciente"; búsqueda `search` con debounce 300ms; `DataTable` desde `GET /pacientes?search=&page=&pageSize=` (Nombre, Apellido, Teléfono, Obra social — sin columna "Alta") + columna "Acciones" con dos íconos inline (`pencil`/`trash-2`) en vez de un menú `more-horizontal` (no hay `dropdown-menu` de shadcn).
+- [x] 7.2 Estados vacíos: búsqueda sin resultados → `user-search` "No encontramos pacientes con ese texto."; sin datos → `users` "Todavía no hay pacientes." + "Nuevo paciente".
+- [x] 7.3 `PacienteDialog.tsx`: campos Nombre, Apellido, Teléfono, Obra social con `pacienteSchema`; crear `POST` / editar `PUT`; 400 → errores por campo; éxito → cerrar + toast + refetch.
+- [x] 7.4 Eliminar paciente: `ConfirmDialog` (`trash-2`, "No podrás eliminarlo si tiene turnos activos.") → `DELETE`; éxito → toast "Paciente eliminado" + refetch; 409 → toast destructivo "Este paciente tiene turnos activos. Cancelá o reasigná esos turnos primero.".
+- [~] 7.5 (simplificado, mismo criterio que 7.1) `ProfesionalesPage.tsx`: misma estructura; columnas Nombre, Apellido, Especialidad (sin "Alta"); vacío con `stethoscope`.
+- [x] 7.6 `ProfesionalDialog.tsx`: campos Nombre, Apellido, Especialidad con `profesionalSchema`; crear/editar + errores por campo.
+- [x] 7.7 Eliminar profesional: `ConfirmDialog` + `DELETE`; 409 → toast "Este profesional tiene turnos activos. Cancelá o reasigná esos turnos primero.".
 
 ## 8. Pulido, verificación y documentación
 

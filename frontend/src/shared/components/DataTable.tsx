@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Loader2 } from 'lucide-react'
 import { EmptyState } from './EmptyState'
 
 export interface Column<T> {
@@ -12,10 +13,10 @@ interface DataTableProps<T> {
   getRowId: (row: T) => string
   isLoading?: boolean
   onRowClick?: (row: T) => void
-  emptyMessage?: string
+  emptyMessage?: ReactNode
 }
 
-// TODO(frontend.md §4.3): paginación + skeletons con shadcn/ui <Table>.
+// TODO(frontend.md §4.3): paginación + skeletons con un componente de tabla más completo.
 export function DataTable<T>({
   columns,
   rows,
@@ -25,19 +26,23 @@ export function DataTable<T>({
   emptyMessage = 'Sin resultados.',
 }: DataTableProps<T>) {
   if (isLoading) {
-    return <div className="py-12 text-center text-sm text-muted-foreground">Cargando…</div>
+    return (
+      <div className="grid place-items-center py-16">
+        <Loader2 size={22} className="animate-spin text-primary" aria-hidden="true" />
+      </div>
+    )
   }
   if (rows.length === 0) {
     return <EmptyState>{emptyMessage}</EmptyState>
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border">
+    <div className="overflow-x-auto rounded-[10px] border border-border">
       <table className="w-full text-sm">
-        <thead className="border-b bg-muted/50 text-left">
+        <thead className="border-b border-border bg-primary-tint/40 text-left">
           <tr>
             {columns.map((col) => (
-              <th key={col.header} className="px-4 py-2 font-medium">
+              <th key={col.header} className="px-4 py-2 font-medium text-foreground">
                 {col.header}
               </th>
             ))}
@@ -48,10 +53,20 @@ export function DataTable<T>({
             <tr
               key={getRowId(row)}
               onClick={onRowClick ? () => onRowClick(row) : undefined}
-              className={onRowClick ? 'cursor-pointer border-b hover:bg-muted/30' : 'border-b'}
+              onKeyDown={
+                onRowClick
+                  ? (e) => {
+                      if (e.key === 'Enter') onRowClick(row)
+                    }
+                  : undefined
+              }
+              tabIndex={onRowClick ? 0 : undefined}
+              className={`border-b border-border last:border-b-0 ${
+                onRowClick ? 'cursor-pointer hover:bg-primary-tint' : ''
+              }`}
             >
               {columns.map((col) => (
-                <td key={col.header} className="px-4 py-2">
+                <td key={col.header} className="px-4 py-2.5">
                   {col.cell(row)}
                 </td>
               ))}
