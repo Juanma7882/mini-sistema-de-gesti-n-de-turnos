@@ -17,6 +17,23 @@ internal sealed class ValidationFilter : IAsyncActionFilter
     {
         var errores = new Dictionary<string, string[]>();
 
+        // Errores de binding (JSON malformado, valor de enum que no matchea
+        // ningún nombre, tipo incompatible, etc.): [ApiController] los deja en
+        // ModelState pero el 400 automático está apagado (SuppressModelState-
+        // InvalidFilter); sin este chequeo, un binding fallido deja `request`
+        // en null y el action revienta con NullReferenceException → 500.
+        foreach (var (campo, estado) in context.ModelState)
+        {
+            if (estado.Errors.Count == 0)
+            {
+                continue;
+            }
+
+            errores[campo] = estado.Errors
+                .Select(e => string.IsNullOrEmpty(e.ErrorMessage) ? "Valor inválido." : e.ErrorMessage)
+                .ToArray();
+        }
+
         foreach (var argumento in context.ActionArguments.Values)
         {
             if (argumento is null)
