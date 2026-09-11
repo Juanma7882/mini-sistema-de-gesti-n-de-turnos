@@ -1,4 +1,5 @@
 using Turnos.Api;
+using Turnos.Api.Realtime;
 using Turnos.Application;
 using Turnos.Infrastructure;
 
@@ -31,6 +32,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<TurnoHub>("/hubs/turnos");
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
 app.Run();

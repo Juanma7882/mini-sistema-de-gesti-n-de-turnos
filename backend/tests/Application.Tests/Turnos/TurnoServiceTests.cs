@@ -71,6 +71,7 @@ public class TurnoServiceTests
         dto.Notas.Should().Be("primera consulta");
         dto.Paciente.Id.Should().Be(1);
         dto.Profesional.Id.Should().Be(10);
+        ctx.Notifier.Notificados.Should().ContainSingle().Which.Id.Should().Be(dto.Id);
     }
 
     [Fact]
@@ -144,6 +145,7 @@ public class TurnoServiceTests
 
         dto.Notas.Should().Be("reprogramada");
         turno.UpdatedAt.Should().Be(ctx.Clock.UtcNow);
+        ctx.Notifier.Notificados.Should().ContainSingle().Which.Id.Should().Be(dto.Id);
     }
 
     [Fact]
@@ -205,6 +207,7 @@ public class TurnoServiceTests
 
         dto.Estado.Should().Be(EstadoTurno.Confirmado);
         turno.UpdatedAt.Should().Be(ctx.Clock.UtcNow);
+        ctx.Notifier.Notificados.Should().ContainSingle().Which.Id.Should().Be(dto.Id);
     }
 
     [Fact]
@@ -291,14 +294,16 @@ public class TurnoServiceTests
         var clock = new FakeClock();
         var turnoRepo = new InMemoryTurnoRepository(pac, pro, turnos);
 
+        var notifier = new RecordingTurnoNotifier();
         var sut = new TurnoService(
             turnoRepo,
             new InMemoryPacienteRepository(pac.ToArray()),
             new InMemoryProfesionalRepository(pro.ToArray()),
             currentUser,
-            clock);
+            clock,
+            notifier);
 
-        return new Contexto { Sut = sut, Turnos = turnoRepo, Clock = clock };
+        return new Contexto { Sut = sut, Turnos = turnoRepo, Clock = clock, Notifier = notifier };
     }
 
     private sealed class Contexto
@@ -308,5 +313,7 @@ public class TurnoServiceTests
         public required InMemoryTurnoRepository Turnos { get; init; }
 
         public required FakeClock Clock { get; init; }
+
+        public required RecordingTurnoNotifier Notifier { get; init; }
     }
 }

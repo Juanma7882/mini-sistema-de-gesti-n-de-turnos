@@ -9,7 +9,9 @@ using Microsoft.OpenApi.Models;
 using Turnos.Api.Auth;
 using Turnos.Api.Errors;
 using Turnos.Api.Filters;
+using Turnos.Api.Realtime;
 using Turnos.Application.Abstractions;
+using Turnos.Application.Turnos;
 using Turnos.Infrastructure.Auth;
 
 namespace Turnos.Api;
@@ -48,6 +50,9 @@ public static class DependencyInjection
         AddSwagger(services);
         AddFrontendCors(services, configuration);
 
+        services.AddSignalR();
+        services.AddScoped<ITurnoNotifier, SignalRTurnoNotifier>();
+
         return services;
     }
 
@@ -76,6 +81,23 @@ public static class DependencyInjection
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.Secret)),
                     RoleClaimType = ClaimTypes.Role,
                     NameClaimType = JwtRegisteredClaimNames.Sub,
+                };
+
+                // El WebSocket nativo del browser no puede mandar el header
+                // Authorization: SignalR manda el access token por query string
+                // en su lugar, así que hay que aceptarlo ahí solo para /hubs.
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        var accessToken = context.Request.Query["access_token"];
+                        if (!string.IsNullOrEmpty(accessToken) &&
+                            context.HttpContext.Request.Path.StartsWithSegments("/hubs"))
+                        {
+                            context.Token = accessToken;
+                        }
+                        return Task.CompletedTask;
+                    },
                 };
             });
 

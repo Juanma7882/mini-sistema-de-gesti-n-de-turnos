@@ -16,7 +16,8 @@ public sealed class TurnoService(
     IPacienteRepository pacientes,
     IProfesionalRepository profesionales,
     ICurrentUser currentUser,
-    IClock clock)
+    IClock clock,
+    ITurnoNotifier notifier)
 {
     public async Task<PagedResult<TurnoDto>> ListarAsync(
         TurnoFiltro filtro, PageRequest page, CancellationToken ct)
@@ -70,7 +71,9 @@ public sealed class TurnoService(
         // del índice único parcial a ConflictException.
         await turnos.SaveChangesAsync(ct);
 
-        return await RecargarDtoAsync(turno.Id, ct);
+        var dto = await RecargarDtoAsync(turno.Id, ct);
+        await notifier.NotificarCambioAsync(dto, ct);
+        return dto;
     }
 
     public async Task<TurnoDto> EditarAsync(int id, TurnoRequest request, CancellationToken ct)
@@ -99,7 +102,9 @@ public sealed class TurnoService(
         turnos.Update(turno);
         await turnos.SaveChangesAsync(ct);
 
-        return await RecargarDtoAsync(id, ct);
+        var dto = await RecargarDtoAsync(id, ct);
+        await notifier.NotificarCambioAsync(dto, ct);
+        return dto;
     }
 
     /// <summary>Cambia el estado si la transición es legal
@@ -127,7 +132,9 @@ public sealed class TurnoService(
         turnos.Update(turno);
         await turnos.SaveChangesAsync(ct);
 
-        return TurnoMapper.ToDto(turno);
+        var dto = TurnoMapper.ToDto(turno);
+        await notifier.NotificarCambioAsync(dto, ct);
+        return dto;
     }
 
     // ---- helpers ----
