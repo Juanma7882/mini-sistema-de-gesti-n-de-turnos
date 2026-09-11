@@ -16,7 +16,7 @@ rol **Paciente** NO entra acá (ver `openspec/changes/add-patient-self-service/t
 - [ ] 1.2 Tailwind CSS: instalar, `tailwind.config`, directivas en `index.css`.
 - [ ] 1.3 shadcn/ui: `init` + tema base; añadir componentes que se usan (`button`, `input`, `select`, `dialog`, `table`, `badge`, `sonner/toast`, `form`, `dropdown-menu`, `calendar`, `popover`).
 - [ ] 1.4 React Router: `createBrowserRouter`, layout raíz, rutas `/login`, `/turnos`, `/pacientes`, `/profesionales`, `*` (404).
-- [ ] 1.5 Estructura de carpetas: `src/{api,auth,components,features,lib,pages,types}`; `.env.example` con `VITE_API_URL`.
+- [ ] 1.5 Estructura de carpetas según `arquitectura-frontend.md` §2 (`src/{app,core,shared,features,pages,styles,tests}`); `.env.example` con `VITE_API_URL`.
 - [ ] 1.6 ESLint + Prettier + script `typecheck`; verificar `npm run dev` y `npm run build`.
 
 ## 2. Cliente HTTP y sesión
