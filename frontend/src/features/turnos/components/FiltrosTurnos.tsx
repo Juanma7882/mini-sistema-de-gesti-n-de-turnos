@@ -32,7 +32,7 @@ export function FiltrosTurnos({
   return (
     <div className="mb-4 flex flex-wrap items-end gap-3">
       <div>
-        <label className="text-xs font-medium text-muted-foreground" htmlFor="desde">
+        <label className="text-meta font-medium text-muted-foreground" htmlFor="desde">
           Desde
         </label>
         <input
@@ -44,7 +44,7 @@ export function FiltrosTurnos({
         />
       </div>
       <div>
-        <label className="text-xs font-medium text-muted-foreground" htmlFor="hasta">
+        <label className="text-meta font-medium text-muted-foreground" htmlFor="hasta">
           Hasta
         </label>
         <input
@@ -56,7 +56,7 @@ export function FiltrosTurnos({
         />
       </div>
       <div>
-        <label className="text-xs font-medium text-muted-foreground" htmlFor="estado">
+        <label className="text-meta font-medium text-muted-foreground" htmlFor="estado">
           Estado
         </label>
         <select
@@ -75,7 +75,7 @@ export function FiltrosTurnos({
       </div>
       {isAdmin && (
         <div>
-          <label className="text-xs font-medium text-muted-foreground" htmlFor="profesionalId">
+          <label className="text-meta font-medium text-muted-foreground" htmlFor="profesionalId">
             Profesional
           </label>
           <select

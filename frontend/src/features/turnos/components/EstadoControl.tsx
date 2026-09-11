@@ -33,7 +33,7 @@ export function EstadoControl({ estado, role, onCambiar }: EstadoControlProps) {
             key={siguiente}
             type="button"
             onClick={() => onCambiar(siguiente)}
-            className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium ${
+            className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-meta font-medium ${
               destructive
                 ? 'border-destructive text-destructive hover:bg-primary-tint'
                 : 'border-border text-foreground hover:bg-primary-tint'

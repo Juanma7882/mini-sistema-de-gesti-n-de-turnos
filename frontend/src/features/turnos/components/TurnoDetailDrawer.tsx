@@ -97,7 +97,7 @@ export function TurnoDetailDrawer({ onEdit }: { onEdit: (turno: TurnoDto) => voi
         className="absolute right-0 top-0 flex h-dvh w-full max-w-105 flex-col gap-5 overflow-y-auto bg-surface p-5 shadow-[0_0_24px_-4px_rgba(162,60,99,0.35)]"
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-foreground">Detalle del turno</h2>
+          <h2 className="text-dialog-title font-semibold text-foreground">Detalle del turno</h2>
           <button
             type="button"
             onClick={close}
@@ -147,7 +147,7 @@ export function TurnoDetailDrawer({ onEdit }: { onEdit: (turno: TurnoDto) => voi
             </section>
 
             <section className="space-y-1.5 border-b border-border pb-4">
-              <p className="text-xs font-medium text-muted-foreground">Paciente</p>
+              <p className="text-meta font-medium text-muted-foreground">Paciente</p>
               <p className="text-sm text-foreground">
                 {turno.paciente.nombre} {turno.paciente.apellido}
               </p>
@@ -165,7 +165,7 @@ export function TurnoDetailDrawer({ onEdit }: { onEdit: (turno: TurnoDto) => voi
             </section>
 
             <section className="space-y-1.5">
-              <p className="text-xs font-medium text-muted-foreground">Profesional</p>
+              <p className="text-meta font-medium text-muted-foreground">Profesional</p>
               <p className="flex items-center gap-1.5 text-sm text-foreground">
                 <Stethoscope size={14} aria-hidden="true" />
                 {turno.profesional.nombre} {turno.profesional.apellido} · {turno.profesional.especialidad}

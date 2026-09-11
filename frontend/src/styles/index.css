@@ -17,12 +17,25 @@
   --color-muted-foreground: #785863;
   --color-border: #f0dfe6;
   --color-ring: #c25c82;
-  --color-primary: #c25c82;
+  /* #be5079 en vez de #c25c82: mismo rosa, oscurecido lo mínimo para que el
+   * texto blanco de los botones primarios llegue a 4.5:1 AA (antes 4.08:1;
+   * verificado con la fórmula de contraste WCAG, no a ojo). */
+  --color-primary: #be5079;
   --color-primary-strong: #a63c63;
   --color-primary-tint: #f7e4ec;
   --color-primary-foreground: #ffffff;
   --color-destructive: #b23a3a;
   --color-destructive-foreground: #ffffff;
+
+  /* Escala tipográfica (frontend-visual-system spec, razón ~1.2): nombra los
+   * tamaños que ya estaban en uso sueltos por componente, para que se citen
+   * por rol en vez de por tamaño crudo de Tailwind. */
+  --text-meta: 0.75rem; /* 12px — label/meta (FieldError, badges, secciones del drawer) */
+  --text-body: 0.875rem; /* 14px — cuerpo */
+  --text-table-header: 0.875rem; /* 14px — header de tabla (mismo cuerpo, peso 500) */
+  --text-dialog-title: 1rem; /* 16px — título de diálogo/drawer */
+  --text-login-title: 1.125rem; /* 18px — título de login */
+  --text-page-title: 1.25rem; /* 20px — título de página */
 }
 
 :root {

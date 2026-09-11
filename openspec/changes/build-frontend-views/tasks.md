@@ -2,7 +2,7 @@
 
 - [x] 1.1 Instalar `@fontsource/manrope` (pesos 400/500/600/700) e importarlo en `src/main.tsx` o `styles/index.css`; definir la familia y `font-display: swap`.
 - [x] 1.2 Reescribir el bloque `@theme` de `src/styles/index.css` con la paleta rosa pastel + blanco (`--color-canvas`, `--color-surface`, `--color-primary`, `--color-primary-strong`, `--color-primary-tint`, `--color-foreground`, `--color-muted-foreground`, `--color-border`, `--color-ring`, `--color-destructive`); actualizar `body` para usar `--color-canvas` / `--color-foreground`.
-- [ ] 1.3 Definir escala tipográfica formal (título login, título página, título diálogo, cuerpo 14px, label/meta, header de tabla) — hoy los tamaños se eligen ad-hoc por componente, no hay una escala documentada; `tabular-nums` sí se usa donde corresponde (Inicio de turnos).
+- [x] 1.3 Escala tipográfica formalizada: tokens `--text-meta` (12px), `--text-body` (14px), `--text-table-header` (14px), `--text-dialog-title` (16px), `--text-login-title` (18px), `--text-page-title` (20px) en el `@theme` de `index.css` (razón ~1.1–1.17 entre pasos, ya lo que estaba en uso — se nombró en vez de reinventar valores nuevos a esta altura). Reemplazados todos los usos sueltos de `text-lg`/`text-xl`/`text-base`/`text-xs` en títulos, labels y badges por los tokens nombrados. `tabular-nums` ya se usa en Inicio de turnos. Sin `uppercase` en labels (verificado).
 - [ ] 1.4 Radios: `10px` (cards/inputs/diálogos) y `6px` (badges) ya se usan consistentemente; falta unificar `8px` en botones (hoy varían entre `rounded-lg`/`rounded-md`) y no hay un único token de sombra de overlay (cada overlay define su propio `shadow-[...]` inline).
 - [~] 1.5/1.6 (cerrada por decisión, no se hace) Se intentó `pnpm dlx shadcn@latest init`: el CLI nuevo (presets Nova/Vega/..., elección Base UI/Radix/Aria) tira "Could not load the workspace config" incluso con alias `@/` temporal configurado; la versión pineada sugerida por el propio error también fallaba en runs no interactivos. Decisión con el usuario: **sin shadcn/Radix** — todo hand-rolled con Tailwind puro (`Dialog`, `ConfirmDialog`, `DataTable`, `FullScreenSpinner`, etc. en `shared/components/`), mismo patrón ya usado en el resto del proyecto. `paths`/`resolve.alias` temporales revertidos, cero rastro del intento fallido.
 - [x] 1.7 `pnpm typecheck && pnpm lint && pnpm build && pnpm test` en verde.
@@ -10,7 +10,7 @@
 ## 2. Componentes compartidos y de estado
 
 - [x] 2.1 `shared/components/PageHeader.tsx`: título + slot de acción (botón primario opcional).
-- [ ] 2.2 (parcial) `shared/components/DataTable.tsx`: columnas configurables ✓, hover de fila `--color-primary-tint` ✓, fila activable por teclado (Enter) ✓, loading con spinner (no shimmer/skeleton de filas) — falta el pie de paginación (`‹ ›`, "Página X de Y"): todas las páginas piden `page:1` fijo, no hay UI para cambiar de página.
+- [~] 2.2 (parcial) `shared/components/DataTable.tsx`: columnas configurables ✓, hover de fila `--color-primary-tint` ✓, fila activable por teclado (Enter) ✓, loading con skeleton real (6 filas, `animate-pulse` + `motion-reduce:animate-none`) en vez del spinner genérico ✓ — sigue faltando el pie de paginación (`‹ ›`, "Página X de Y"): todas las páginas piden `page:1` fijo, no hay UI para cambiar de página.
 - [x] 2.3 `shared/components/EmptyState.tsx`: wrapper simple; cada caller compone ícono lucide + texto + acción opcional (sin emoji) — así se usa en Turnos/Pacientes/Profesionales.
 - [x] 2.4 `shared/components/FieldError.tsx`: ícono `alert-circle` 14px + mensaje; integrado con `useProblemForm`.
 - [x] 2.5 `shared/components/ConfirmDialog.tsx`: ícono en círculo rosa-tint, título (vía `Dialog`), cuerpo, botón destructivo + botón de cancelar. Nuevo `shared/components/Dialog.tsx` genérico (overlay + Escape) reusado por `ConfirmDialog` y los tres diálogos de formulario.
@@ -26,7 +26,7 @@
 - [x] 3.6 `app/providers.tsx`: `ErrorBoundary` raíz (pantalla `alert-octagon` + "Recargar") y `Toaster` (sonner) global con ícono lucide por tipo (éxito salvia, error rojo cálido).
 - [x] 3.7 Toast genérico para 500 / error de red desde el interceptor del `httpClient` (`wifi-off`), sin exponer detalle técnico.
 - [x] 3.8 `pages/ForbiddenPage.tsx` (`shield-x`, "No tenés permiso para ver esta página.", enlace "Ir a turnos") y `pages/NotFoundPage.tsx` (`compass`, "No encontramos esta página.", enlace "Volver al inicio"), ambas dentro del shell.
-- [ ] 3.9 (parcial) Anillo de foco 2px `--color-ring` global ya está (regla `:focus-visible` en `styles/index.css`); falta el respeto de `prefers-reduced-motion` en shimmer y transiciones de overlay, que se hace cuando existan esos componentes (skeleton de `DataTable` §2.2, diálogos/drawer §6–7).
+- [x] 3.9 Anillo de foco 2px `--color-ring` global (`:focus-visible` en `styles/index.css`); el shimmer del skeleton de `DataTable` (§2.2) usa `motion-reduce:animate-none`. Los diálogos/drawer (`Dialog`, `TurnoDetailDrawer`, panel mobile de `MainLayout`) no tienen transición de entrada/salida propia — aparecen/desaparecen sin animación (render condicional), así que no hay nada que degradar ahí.
 
 ## 4. Login
 
@@ -43,7 +43,7 @@
 - [~] 5.2 (parcial) `FiltrosTurnos.tsx`: rango de fechas con `<input type="date">` nativo (no `popover`+`calendar`, no se instaló shadcn — ver §1.5/1.6), estado (`select`, sin swatch de color en la opción), y solo Admin: profesional (`select`); "Limpiar filtros" (`x`) visible solo con filtros activos. **Falta el filtro de paciente por búsqueda**: `TurnosQuery` del backend no tiene un parámetro de texto libre, solo `pacienteId` — no se agregó un combobox de paciente solo para filtrar.
 - [x] 5.3 Filtros sincronizados a la query string (`?desde&hasta&estado&profesionalId`) vía `useSearchParams` de react-router (no se usó `queryString.ts`, que sigue reservado para armar querystrings de request); rehidratan al recargar.
 - [x] 5.4 Tabla de turnos sobre `DataTable`: columnas Paciente, Profesional (oculta para rol Profesional, ya que siempre sería su propio nombre), Inicio (`formatInicio`, `tabular-nums`), Estado (`EstadoBadge`), Notas (truncadas con `line-clamp-1`), `chevron-right`.
-- [~] 5.5 (parcial) Loading con spinner (no skeleton de 6–8 filas); `EmptyState` `calendar-search` "No hay turnos para estos filtros." + "Limpiar filtros"; vacío total → "Todavía no hay turnos." + "Nuevo turno" (solo Admin); error no-500 → panel `alert-triangle` + "Reintentar" (ver `TurnosPage`, condiciona `error.status < 500 && !== 0`; 500/red ya van por el toast global de `httpClient`).
+- [x] 5.5 Skeleton de 6 filas mientras carga (vía `DataTable`, ver §2.2); `EmptyState` `calendar-search` "No hay turnos para estos filtros." + "Limpiar filtros"; vacío total → "Todavía no hay turnos." + "Nuevo turno" (solo Admin); error no-500 → panel `alert-triangle` + "Reintentar" (ver `TurnosPage`, condiciona `error.status < 500 && !== 0`; 500/red ya van por el toast global de `httpClient`).
 - [x] 5.6 `TurnoDetailDrawer.tsx`: panel derecho ~420px (`max-w-105`, full-width en mobile), refleja `?turno=<id>` (recargable); secciones Turno / Paciente (`phone` con `tel:`, `shield`) / Profesional (`stethoscope`) separadas por hairline; estado 404 → `search-x` "Este turno ya no está disponible." + "Volver al listado".
 - [x] 5.7 Abrir el drawer desde click o Enter en la fila (`DataTable` soporta `tabIndex`+`onKeyDown` cuando hay `onRowClick`).
 
@@ -68,9 +68,9 @@
 
 ## 8. Pulido, verificación y documentación
 
-- [ ] 8.1 Revisar skeletons y estados vacíos en todas las tablas; responsive con scroll horizontal de tabla en mobile; foco/orden de tabulación en diálogos y drawer.
-- [ ] 8.2 Grep anti-emoji sobre `frontend/src` (JSX y strings visibles): cero coincidencias.
-- [ ] 8.3 Contraste AA de texto sobre `--color-primary`, badges y `muted-foreground`; capturas del shell y de `/turnos` para validar que no lee como "spa".
+- [~] 8.1 (parcial) Skeleton (§2.2) y estados vacíos (§5.5/7.2) revisados; tabla en `overflow-x-auto` (scroll horizontal en mobile). Falta auditar foco/orden de tabulación dentro de `Dialog`/`TurnoDetailDrawer` específicamente (hoy no hay focus-trap: Tab puede salir del modal hacia el resto de la página).
+- [x] 8.2 Grep anti-emoji sobre `frontend/src`: cero coincidencias reales (un `→` en un comentario de `machine.ts`, no es emoji ni texto visible).
+- [x] 8.3 Contraste AA calculado con la fórmula WCAG (relative luminance), no a ojo — 13 pares de color de la app (botón primario, texto sobre canvas/surface, `muted-foreground`, alertas, badges de estado). 3 pares fallaban 4.5:1 por poco (4.08–4.24): `--color-primary` `#c25c82`→`#be5079`, y el texto del badge "Atendido" `#3E7A55`→`#3B7451` — mismos tonos, oscurecidos lo mínimo. Los 13 pares pasan 4.5:1 ahora. No se tomaron capturas de las vistas autenticadas (`/turnos` con datos) porque el backend local cuelga con `POST /auth/refresh` cuando llegan 2 requests concurrentes (ver nota de sesión) — sí se verificó `/login` visualmente con Playwright (instalado en el scratchpad, no en el repo).
 - [ ] 8.4 `pnpm typecheck && pnpm lint && pnpm build && pnpm test` en verde; tests de `machine.ts` intactos.
 - [ ] 8.5 Marcar tareas cumplidas en `frontend.md` (§1.3, §3–§9) y actualizar `arquitectura-frontend.md` si cambió algo del scaffold.
 - [ ] 8.6 Agregar la sección "Frontend" de "Cómo correr localmente" al `README.md` y volcar los prompts de IA usados a `PROMPTS.md` / `docs/uso-de-ia.md`.

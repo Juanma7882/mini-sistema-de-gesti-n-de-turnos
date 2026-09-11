@@ -62,7 +62,7 @@ export function LoginPage() {
           <span className="flex size-11 items-center justify-center rounded-[10px] bg-primary-tint text-primary">
             <HeartPulse size={22} aria-hidden="true" />
           </span>
-          <h1 className="text-lg font-semibold">Ingresá a tu cuenta</h1>
+          <h1 className="text-login-title font-semibold">Ingresá a tu cuenta</h1>
         </div>
 
         {formError && (

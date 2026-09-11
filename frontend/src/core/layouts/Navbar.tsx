@@ -20,7 +20,7 @@ export function Navbar() {
       <InitialsBadge nombre={user.nombre} />
       <div className="flex min-w-0 flex-1 flex-col leading-tight">
         <span className="truncate text-sm font-medium text-foreground">{user.nombre}</span>
-        <span className="w-fit rounded-md bg-primary-tint px-1.5 py-0.5 text-xs font-medium text-primary-strong">
+        <span className="w-fit rounded-md bg-primary-tint px-1.5 py-0.5 text-meta font-medium text-primary-strong">
           {user.role}
         </span>
       </div>

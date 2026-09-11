@@ -30,7 +30,7 @@ export function Dialog({ open, title, onClose, children }: DialogProps) {
         className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[10px] border border-border bg-surface p-6 shadow-[0_0_24px_-4px_rgba(162,60,99,0.35)]"
       >
         <div className="flex items-center justify-between gap-4">
-          <h2 className="text-base font-semibold text-foreground">{title}</h2>
+          <h2 className="text-dialog-title font-semibold text-foreground">{title}</h2>
           <button
             type="button"
             onClick={onClose}
