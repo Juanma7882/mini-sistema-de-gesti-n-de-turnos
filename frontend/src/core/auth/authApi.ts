@@ -23,5 +23,6 @@ export const authApi = {
   refresh: () =>
     httpClient.post<{ token: string }>('/auth/refresh', undefined, { anonymous: true }),
   logout: () => httpClient.post<void>('/auth/logout'),
-  me: () => httpClient.get<AuthUser>('/auth/me'),
+  // skipAuthRetry: se llama desde dentro de `refresh()`; un 401 acá no debe reintentar refresh (evita deadlock sobre refreshInFlight).
+  me: () => httpClient.get<AuthUser>('/auth/me', { skipAuthRetry: true }),
 }

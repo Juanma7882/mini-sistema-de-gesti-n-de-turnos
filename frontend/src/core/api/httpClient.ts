@@ -60,10 +60,12 @@ export interface RequestOptions extends Omit<RequestInit, 'body'> {
   body?: unknown
   /** No adjunta Authorization ni intenta refresh (login / refresh). */
   anonymous?: boolean
+  /** Adjunta Authorization pero no dispara el interceptor de refresh en 401 (uso: llamadas hechas desde dentro del propio `refresh`, para evitar reentrancia sobre `refreshInFlight`). */
+  skipAuthRetry?: boolean
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { anonymous = false, body, headers, ...rest } = options
+  const { anonymous = false, skipAuthRetry = false, body, headers, ...rest } = options
 
   const doFetch = (token: string | null): Promise<Response> =>
     fetch(`${env.apiUrl}${path}`, {
@@ -85,7 +87,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     throw new ApiError(0, { title: 'Network Error', detail: CONNECTION_ERROR_MESSAGE, errors: {} })
   }
 
-  if (res.status === 401 && !anonymous) {
+  if (res.status === 401 && !anonymous && !skipAuthRetry) {
     const newToken = await runRefresh()
     if (newToken) {
       try {
