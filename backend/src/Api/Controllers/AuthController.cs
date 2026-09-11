@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Turnos.Api.Auth;
 using Turnos.Application.Auth;
 
@@ -13,7 +14,10 @@ public sealed class AuthController(AuthService authService) : ApiControllerBase
 {
     /// <summary>Sin <c>[Authorize]</c>: anónimo por defecto (no hay fallback
     /// policy global). 401 si las credenciales son inválidas (lo lanza
-    /// <see cref="AuthService"/>, lo traduce <c>ExceptionHandler</c>).</summary>
+    /// <see cref="AuthService"/>, lo traduce <c>ExceptionHandler</c>). 429 si
+    /// se superan los intentos por IP de la policy <c>login</c> (rate
+    /// limiter, ver <c>Api/DependencyInjection.AddLoginRateLimiting</c>).</summary>
+    [EnableRateLimiting(Turnos.Api.DependencyInjection.LoginRateLimitPolicy)]
     [HttpPost("login")]
     public async Task<ActionResult<AuthResultDto>> Login(LoginRequest request, CancellationToken ct)
     {

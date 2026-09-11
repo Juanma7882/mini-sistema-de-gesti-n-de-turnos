@@ -30,6 +30,7 @@ if (app.Environment.IsDevelopment())
 app.UseCors(Turnos.Api.DependencyInjection.FrontendCorsPolicy);
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.MapControllers();
 app.MapHub<TurnoHub>("/hubs/turnos");

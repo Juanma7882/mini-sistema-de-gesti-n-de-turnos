@@ -2,8 +2,10 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Turnos.Api.Auth;
@@ -23,6 +25,7 @@ namespace Turnos.Api;
 public static class DependencyInjection
 {
     public const string FrontendCorsPolicy = "frontend";
+    public const string LoginRateLimitPolicy = "login";
 
     public static IServiceCollection AddApi(this IServiceCollection services, IConfiguration configuration)
     {
@@ -49,6 +52,7 @@ public static class DependencyInjection
         AddJwtAuth(services, configuration);
         AddSwagger(services);
         AddFrontendCors(services, configuration);
+        AddLoginRateLimiting(services, configuration);
 
         services.AddSignalR();
         services.AddScoped<ITurnoNotifier, SignalRTurnoNotifier>();
@@ -131,6 +135,44 @@ public static class DependencyInjection
                     Array.Empty<string>()
                 },
             });
+        });
+    }
+
+    private static void AddLoginRateLimiting(IServiceCollection services, IConfiguration configuration)
+    {
+        var rateLimit = configuration.GetSection(RateLimitOptions.SectionName).Get<RateLimitOptions>()
+            ?? new RateLimitOptions();
+
+        services.AddRateLimiter(options =>
+        {
+            // Default de ASP.NET Core es 503 (Status503ServiceUnavailable) si
+            // no se pisa acá — 429 es el código correcto para "demasiados
+            // intentos", el que espera cualquier cliente HTTP estándar.
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+            // Mismo formato RFC 7807 que ExceptionHandler (§6.6) para el resto
+            // de los errores — el 429 no es una excepción de negocio, así que
+            // no pasa por ahí, pero el body debe verse igual para el cliente.
+            options.OnRejected = async (context, ct) =>
+            {
+                context.HttpContext.Response.ContentType = "application/problem+json";
+                await context.HttpContext.Response.WriteAsJsonAsync(
+                    new ProblemDetails
+                    {
+                        Status = StatusCodes.Status429TooManyRequests,
+                        Title = "Demasiados intentos. Esperá un momento y volvé a intentar.",
+                    },
+                    ct);
+            };
+
+            options.AddPolicy(LoginRateLimitPolicy, httpContext => RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                factory: _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = rateLimit.PermitLimit,
+                    Window = TimeSpan.FromSeconds(rateLimit.WindowSeconds),
+                    QueueLimit = 0,
+                }));
         });
     }
 
