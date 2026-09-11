@@ -3,9 +3,10 @@
 Aplicación para gestionar los turnos de una clínica: pacientes, profesionales y
 turnos, con dos tipos de usuario (Administrador y Profesional).
 
-> **Estado:** en construcción. Este README documenta el diseño acordado (rutas,
-> contratos y flujos). Las secciones marcadas con ⚠️ se completan durante la
-> implementación.
+> **Estado:** backend completo (capas, auth, endpoints, tests de integración,
+> Dockerfile y CI) y desplegable — solo falta cargar la instancia en Railway
+> (ver `backend.md` §11.3). El frontend cubre el flujo funcional completo de
+> las tres entidades; el detalle de qué falta pulir vive en `frontend.md`.
 
 ---
 
@@ -23,28 +24,41 @@ turnos, con dos tipos de usuario (Administrador y Profesional).
 
 ---
 
-## Cómo correr el proyecto localmente ⚠️
-
-_Instrucciones definitivas al finalizar la implementación._ Bosquejo previsto:
+## Cómo correr el proyecto localmente
 
 ```bash
 # Backend
-cd src/Api
+cd backend/src/Api
+dotnet user-secrets set "Jwt:Secret" "una-clave-de-desarrollo-de-32-caracteres-o-mas"
 dotnet restore
-dotnet ef database update      # crea/actualiza turnos.db y siembra datos
-dotnet run                     # https://localhost:5001
+dotnet run                     # migra + siembra turnos.db al arrancar — http://localhost:5125
 
 # Frontend
 cd frontend
-npm install
-npm run dev                    # http://localhost:5173
+pnpm install
+pnpm dev                       # http://localhost:5173
 ```
+
+No hace falta `dotnet ef database update` a mano: `Program.cs` corre las
+migraciones pendientes y siembra los datos de demo (si la base está vacía) en
+cada arranque, en cualquier entorno.
+
+`Jwt:Secret` es la única variable que hay que setear para levantar el backend
+local (el resto tiene defaults razonables en `appsettings.json`). `dotnet user-
+secrets` la guarda fuera del repo; alternativas equivalentes son
+`appsettings.Development.json` (ignorado por git) o la variable de entorno
+`Jwt__Secret`. Sin ella, la Api levanta pero el primer request que pase por el
+middleware de auth (`/api/auth/login` incluido) revienta al construir la
+clave HMAC.
+
+Swagger queda disponible en `http://localhost:5125/swagger` (solo en
+`Development`, que es el entorno por default de `dotnet run`).
 
 ---
 
 ## Variables de entorno
 
-### Backend (`src/Api`)
+### Backend (`backend/src/Api`)
 
 | Variable | Descripción | Ejemplo |
 |---|---|---|
@@ -344,22 +358,38 @@ auditoría).
 
 ---
 
-## Validaciones principales ⚠️
+## Validaciones principales
 
-_Se detallan al implementar._ Resumen:
+FluentValidation por request, corridas por un filtro global (`ValidationFilter`)
+que también revisa los errores de *binding* de ASP.NET Core (JSON malformado,
+un enum que no matchea ningún nombre) — los dos caminos terminan en el mismo
+`400` con `errors` por campo.
 
-- **Paciente / Profesional**: nombre y apellido obligatorios; teléfono con formato;
-  obra social / especialidad obligatorios.
-- **Turno**: `pacienteId` y `profesionalId` deben existir y no estar dados de baja;
-  `inicio` obligatorio, a futuro, precisión de minuto; `estado` dentro del enum;
-  transición de estado válida según el diagrama y el rol.
-- **Anti doble-turno**: chequeo en Application + índice único parcial en SQLite;
-  la carrera entre dos escrituras la corta el índice (se captura la
-  `DbUpdateException` → 409).
+- **Paciente**: `nombre`/`apellido` (obligatorios, ≤80), `telefono` (obligatorio,
+  ≤30), `obraSocial` (obligatorio, ≤120).
+- **Profesional**: `nombre`/`apellido` (obligatorios, ≤80), `especialidad`
+  (obligatorio, ≤120). Alta (`POST`) además: `email` (obligatorio, formato
+  válido, ≤256, único — si no, **409**) y `password` (obligatorio, 8-100
+  caracteres).
+- **Turno**: `pacienteId`/`profesionalId` > 0 en el body; que existan y no
+  estén dados de baja se valida en el servicio (necesita la base) → **404**.
+  `inicio` obligatorio, a futuro, precisión de minuto (sin segundos).
+  `estado` (en `PATCH .../estado`) dentro del enum `EstadoTurno`.
+- **Login**: `email` con formato válido, `password` obligatoria.
+- **Anti doble-turno**: pre-chequeo en `TurnoService` + índice único parcial en
+  SQLite (`(ProfesionalId, Inicio) WHERE Estado <> Cancelado`); la carrera entre
+  dos escrituras concurrentes la corta el índice (se captura la
+  `DbUpdateException` → **409**).
+- **Un paciente no puede tener dos turnos activos con el mismo profesional**:
+  mismo patrón — pre-chequeo + segundo índice único parcial
+  (`(ProfesionalId, PacienteId) WHERE Estado < Cancelado`).
+- **Máquina de estados**: `MaquinaEstados.EsTransicionValida` (Domain, función
+  pura) decide qué flechas son legales; el rol solo acota *sobre qué turnos*
+  puede dispararlas cada uno, no *qué transiciones* existen.
 
 ---
 
-## Estructura del proyecto ⚠️
+## Estructura del proyecto
 
 ```
 ├── backend/                    .NET 9 — solución Turnos.sln
@@ -367,20 +397,26 @@ _Se detallan al implementar._ Resumen:
 │   │   ├── Domain/             entidades, enums, reglas de negocio puras
 │   │   ├── Application/        casos de uso, validaciones, DTOs, interfaces
 │   │   ├── Infrastructure/     EF Core, DbContext, migraciones, repos, JWT, BCrypt
-│   │   └── Api/                controllers/endpoints, middleware, DI, seed
+│   │   └── Api/                controllers, pipeline (auth/CORS/errores), DI, seed
 │   └── tests/
-│       └── *.Tests/            xUnit (regla anti doble-turno, transiciones, integración)
+│       ├── Domain.Tests/       máquina de estados
+│       ├── Application.Tests/  servicios contra fakes en memoria
+│       ├── Infrastructure.Tests/ índices únicos parciales contra SQLite real
+│       └── Api.Tests/          integración: Api real (WebApplicationFactory) + SQLite temporal
 ├── frontend/                   React + TS + Vite + Tailwind + shadcn/ui
+├── docs/                       decisiones técnicas, uso de IA, mejoras futuras
+├── scripts/                    smoke.sh — smoke test post-deploy
 ├── Dockerfile                  build del backend para Railway
-└── .github/workflows/          CI (build + test)
+├── .dockerignore
+└── .github/workflows/          CI (build + test del backend)
 ```
 
 ---
 
-## Decisiones técnicas · Uso de IA · Mejoras futuras ⚠️
+## Decisiones técnicas · Uso de IA · Mejoras futuras
 
-Ver `docs/` (a completar):
+Ver `docs/`:
 
-- `docs/decisiones-tecnicas.md`
-- `docs/uso-de-ia.md` — herramientas, prompts principales, qué se revisó/corrigió
-- `docs/mejoras-futuras.md`
+- [`docs/decisiones-tecnicas.md`](docs/decisiones-tecnicas.md)
+- [`docs/uso-de-ia.md`](docs/uso-de-ia.md) — herramientas, prompts principales, qué se revisó/corrigió
+- [`docs/mejoras-futuras.md`](docs/mejoras-futuras.md)
