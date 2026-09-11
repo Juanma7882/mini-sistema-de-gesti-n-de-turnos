@@ -16,7 +16,7 @@ export function Navbar() {
   }
 
   return (
-    <div className="flex w-full items-center gap-2.5 font-poppins">
+    <div className="flex rounded-full w-full items-center gap-2.5 font-poppins">
       <InitialsBadge nombre={user.nombre} />
       <div className="flex min-w-0 flex-1 flex-col leading-tight">
         <span className="truncate text-sm font-medium text-foreground">{user.nombre}</span>
@@ -28,7 +28,7 @@ export function Navbar() {
         type="button"
         onClick={onLogout}
         aria-label="Cerrar sesión"
-        className="shrink-0 rounded-lg p-2 text-muted-foreground hover:bg-primary-tint hover:text-primary-strong"
+        className="shrink-0 rounded-full p-2 text-muted-foreground hover:bg-primary-tint hover:text-primary-strong"
       >
         <LogOut size={16} aria-hidden="true" />
       </button>

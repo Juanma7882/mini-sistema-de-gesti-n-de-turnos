@@ -38,10 +38,9 @@ function NavLinks({ links, role, onNavigate }: { links: NavItem[]; role?: Role; 
           to={to}
           onClick={onNavigate}
           className={({ isActive }) =>
-            `flex items-center gap-3 rounded-lg border-l-[3px] px-4 py-3 font-poppins text-nav-link ${
-              isActive
-                ? 'border-primary bg-primary-tint font-semibold text-primary-strong'
-                : 'border-transparent text-muted-foreground hover:bg-primary-tint/60 hover:text-foreground'
+            `flex items-center gap-3 rounded-lg border-l-[3px] px-4 py-3 font-poppins text-nav-link ${isActive
+              ? 'border-primary bg-primary-tint font-semibold text-primary-strong'
+              : 'border-transparent text-muted-foreground hover:bg-primary-tint/60 hover:text-foreground'
             }`
           }
         >
@@ -61,7 +60,7 @@ export function MainLayout() {
   return (
     <div className="min-h-dvh bg-canvas md:flex">
       {/* Sidebar de escritorio */}
-      <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-surface py-5 md:flex">
+      <aside className="hidden  min-h-dvh shrink-0 flex-col border-r border-border bg-surface py-5 md:flex">
         <div className="flex flex-1 flex-col gap-6 px-3">
           <Brand />
           <NavLinks links={links} role={user?.role} />
