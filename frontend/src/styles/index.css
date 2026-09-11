@@ -34,7 +34,7 @@
   --text-body: 0.875rem; /* 14px — cuerpo */
   --text-table-header: 0.875rem; /* 14px — header de tabla (mismo cuerpo, peso 500) */
   --text-dialog-title: 1rem; /* 16px — título de diálogo/drawer */
-  --text-nav-link: 1rem; /* 16px — ítems del menú lateral, un paso arriba del cuerpo */
+  --text-nav-link: 0.875rem; /* 14px — ítems del menú lateral (igual al cuerpo; el look "grande" de la referencia es por el padding, no por el tamaño de fuente) */
   --text-login-title: 1.125rem; /* 18px — título de login */
   --text-page-title: 1.25rem; /* 20px — título de página */
 }

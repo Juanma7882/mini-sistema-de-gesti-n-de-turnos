@@ -38,14 +38,14 @@ function NavLinks({ links, role, onNavigate }: { links: NavItem[]; role?: Role; 
           to={to}
           onClick={onNavigate}
           className={({ isActive }) =>
-            `flex items-center gap-3 rounded-lg border-l-[3px] px-3 py-2.5 font-poppins text-nav-link ${
+            `flex items-center gap-3 rounded-lg border-l-[3px] px-4 py-3 font-poppins text-nav-link ${
               isActive
                 ? 'border-primary bg-primary-tint font-semibold text-primary-strong'
-                : 'border-transparent font-medium text-muted-foreground hover:bg-primary-tint/60 hover:text-foreground'
+                : 'border-transparent text-muted-foreground hover:bg-primary-tint/60 hover:text-foreground'
             }`
           }
         >
-          <Icon size={19} aria-hidden="true" />
+          <Icon size={20} aria-hidden="true" />
           {to === '/turnos' && role === 'Profesional' ? 'Mis turnos' : label}
         </NavLink>
       ))}
