@@ -38,6 +38,19 @@ public sealed class AuthTests(IntegrationTestFactory factory)
     }
 
     [Fact]
+    public async Task Login_EmailInvalido_Devuelve400()
+    {
+        using var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync(
+            "/api/auth/login",
+            new LoginRequest { Email = "hola", Password = "cualquiera" });
+
+        var body = await response.Content.ReadAsStringAsync();
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest, body);
+    }
+
+    [Fact]
     public async Task Login_CredencialesInvalidas_Devuelve401()
     {
         using var client = factory.CreateClient();
