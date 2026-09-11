@@ -23,13 +23,13 @@ public sealed class InMemoryProfesionalRepository : IProfesionalRepository
     public Task<(IReadOnlyList<Profesional> Items, int Total)> GetPagedAsync(
         string? search, int page, int pageSize, CancellationToken ct)
     {
-        IEnumerable<Profesional> query = _profesionales.Where(p => p.DeletedAt is null);
+        IEnumerable<Profesional> query = _profesionales.Where(p => p.Usuario.DeletedAt is null);
 
         if (!string.IsNullOrWhiteSpace(search))
         {
             var s = search.Trim();
             query = query.Where(p =>
-                $"{p.Nombre} {p.Apellido}".Contains(s, StringComparison.OrdinalIgnoreCase));
+                $"{p.Usuario.Nombre} {p.Usuario.Apellido}".Contains(s, StringComparison.OrdinalIgnoreCase));
         }
 
         var ordered = query.OrderBy(p => p.Id).ToList();
@@ -38,7 +38,7 @@ public sealed class InMemoryProfesionalRepository : IProfesionalRepository
     }
 
     public Task<Profesional?> GetByIdAsync(int id, CancellationToken ct) =>
-        Task.FromResult(_profesionales.FirstOrDefault(p => p.Id == id && p.DeletedAt is null));
+        Task.FromResult(_profesionales.FirstOrDefault(p => p.Id == id && p.Usuario.DeletedAt is null));
 
     public Task AddAsync(Profesional profesional, CancellationToken ct)
     {

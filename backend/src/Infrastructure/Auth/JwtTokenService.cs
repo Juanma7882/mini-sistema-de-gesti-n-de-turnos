@@ -27,11 +27,11 @@ internal sealed class JwtTokenService(IOptions<JwtOptions> options, IClock clock
             new(ClaimTypes.Role, usuario.Rol.ToString()),
         };
 
-        if (usuario.ProfesionalId is { } profesionalId)
+        if (usuario.Profesional is { } profesional)
         {
             claims.Add(new Claim(
                 "profesionalId",
-                profesionalId.ToString(CultureInfo.InvariantCulture)));
+                profesional.Id.ToString(CultureInfo.InvariantCulture)));
         }
 
         var now = clock.UtcNow;

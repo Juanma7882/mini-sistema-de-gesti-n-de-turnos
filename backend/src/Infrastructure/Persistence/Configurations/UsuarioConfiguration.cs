@@ -11,6 +11,7 @@ internal sealed class UsuarioConfiguration : IEntityTypeConfiguration<Usuario>
         b.HasKey(u => u.Id);
 
         b.Property(u => u.Nombre).IsRequired().HasMaxLength(160);
+        b.Property(u => u.Apellido).IsRequired().HasMaxLength(80);
         b.Property(u => u.Email).IsRequired().HasMaxLength(256);
         b.Property(u => u.PasswordHash).IsRequired().HasMaxLength(100);
         b.Property(u => u.Rol).IsRequired().HasConversion<int>();
@@ -18,9 +19,6 @@ internal sealed class UsuarioConfiguration : IEntityTypeConfiguration<Usuario>
 
         b.HasIndex(u => u.Email).IsUnique();
 
-        b.HasOne(u => u.Profesional)
-            .WithOne(p => p.Usuario)
-            .HasForeignKey<Usuario>(u => u.ProfesionalId)
-            .OnDelete(DeleteBehavior.Restrict);
+        b.HasQueryFilter(u => u.DeletedAt == null);
     }
 }

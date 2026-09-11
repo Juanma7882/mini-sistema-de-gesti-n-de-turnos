@@ -48,11 +48,11 @@ public sealed class ValidacionTests(IntegrationTestFactory factory)
     {
         using var admin = await factory.AsAdminAsync();
 
-        var response = await admin.Http.PostAsJsonAsync("/api/profesionales", new ProfesionalRequest());
+        var response = await admin.Http.PostAsJsonAsync("/api/profesionales", new CrearProfesionalRequest());
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var errores = await LeerErroresAsync(response);
-        errores.Keys.Should().Contain(["Nombre", "Apellido", "Especialidad"]);
+        errores.Keys.Should().Contain(["Nombre", "Apellido", "Especialidad", "Email", "Password"]);
     }
 
     /// <summary>Regresión del bug encontrado al planificar este test: con

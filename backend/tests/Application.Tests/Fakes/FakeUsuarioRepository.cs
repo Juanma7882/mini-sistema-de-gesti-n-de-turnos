@@ -6,8 +6,15 @@ namespace Turnos.Application.Tests.Fakes;
 public sealed class FakeUsuarioRepository : IUsuarioRepository
 {
     private readonly List<Usuario> _usuarios;
+    private int _nextId;
 
-    public FakeUsuarioRepository(params Usuario[] seed) => _usuarios = seed.ToList();
+    public FakeUsuarioRepository(params Usuario[] seed)
+    {
+        _usuarios = seed.ToList();
+        _nextId = _usuarios.Count == 0 ? 1 : _usuarios.Max(u => u.Id) + 1;
+    }
+
+    public IReadOnlyList<Usuario> Usuarios => _usuarios;
 
     public Task<Usuario?> GetByEmailAsync(string email, CancellationToken ct) =>
         Task.FromResult(_usuarios.FirstOrDefault(u =>
@@ -15,4 +22,11 @@ public sealed class FakeUsuarioRepository : IUsuarioRepository
 
     public Task<Usuario?> GetByIdAsync(int id, CancellationToken ct) =>
         Task.FromResult(_usuarios.FirstOrDefault(u => u.Id == id));
+
+    public Task AddAsync(Usuario usuario, CancellationToken ct)
+    {
+        usuario.Id = _nextId++;
+        _usuarios.Add(usuario);
+        return Task.CompletedTask;
+    }
 }

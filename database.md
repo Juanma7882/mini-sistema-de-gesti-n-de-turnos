@@ -5,6 +5,12 @@ Administrador y Profesional). El rol **Paciente** no entra acá (ver
 `openspec/changes/add-patient-self-service/`).
 Stack: SQLite + EF Core (migraciones) · .NET 9 · capas Domain / Infrastructure.
 
+> **Identidad Usuario/Profesional (2026-09-11).** `Usuario` es la única fuente
+> de verdad del nombre de una persona y de su baja/deshabilitación; `Profesional`
+> es el perfil de negocio (especialidad, turnos) y siempre requiere un `Usuario`
+> asociado (FK obligatoria del lado de `Profesional`). Detalle y alternativas
+> descartadas en `openspec/changes/archive/2026-09-11-unify-usuario-profesional/`.
+
 Enfoque **code-first**: las clases de `Domain` + `IEntityTypeConfiguration<T>` en
 `Infrastructure` son la fuente de verdad; el esquema se genera con
 `dotnet ef migrations`. El `README.md` solo tenía un bosquejo de campos; este
@@ -25,8 +31,8 @@ implementación viven en `backend.md` §2 (Domain) y §3 (Infrastructure).
 | **Fechas de auditoría** (`CreatedAt`, `UpdatedAt`, `ExpiresAt`, `RevokedAt`) | `DateTime` en **UTC**, seteadas en la capa Application vía `IClock.UtcNow`. **No** se usa `HasDefaultValueSql("CURRENT_TIMESTAMP")` para mantener el reloj testeable. |
 | **`Turno.Inicio`** | `DateTime` **local naïve** (`DateTimeKind.Unspecified`), precisión de minuto (segundos/ms truncados al escribir). Serializa como `"2026-09-15T15:00:00"` (sin `Z` ni offset). |
 | **Almacenamiento de `DateTime` en SQLite** | El provider lo guarda como `TEXT` ISO-8601; las comparaciones de rango (`desde`/`hasta`) funcionan lexicográficamente. |
-| **Soft delete** | `DeletedAt DateTime?` en `Paciente` y `Profesional` + `HasQueryFilter(e => e.DeletedAt == null)`. El `Turno` no se borra: se pasa a `Cancelado`. |
-| **Borrado de FKs** | `DeleteBehavior.Restrict` en todas las relaciones salvo `RefreshToken → Usuario` (`Cascade`). Nunca se hace hard-delete de Paciente/Profesional. |
+| **Soft delete** | `DeletedAt DateTime?` en `Paciente` y `Usuario` + `HasQueryFilter(e => e.DeletedAt == null)`. `Profesional` no tiene `DeletedAt` propio: hereda la baja de su `Usuario` vía `HasQueryFilter(p => p.Usuario.DeletedAt == null)` (dar de baja a un profesional también le corta el login, son el mismo flag). El `Turno` no se borra: se pasa a `Cancelado`. |
+| **Borrado de FKs** | `DeleteBehavior.Restrict` en todas las relaciones salvo `RefreshToken → Usuario` (`Cascade`). Nunca se hace hard-delete de Paciente/Profesional/Usuario. |
 
 ---
 
@@ -47,35 +53,49 @@ implementación viven en `backend.md` §2 (Domain) y §3 (Infrastructure).
 
 ## 2. `Profesional`
 
+Perfil de negocio (atiende turnos). El nombre de la persona **no** vive acá:
+vive en `Usuario` (única fuente de verdad, ver tabla 3). Un `Profesional`
+**siempre** tiene un `Usuario` — la FK es obligatoria y vive de este lado,
+porque este es el lado obligatorio de la relación 1:1.
+
 | Columna | Tipo C# | Null | Config EF | Tipo SQLite |
 |---|---|---|---|---|
 | `Id` | `int` | no | PK, identity | `INTEGER PK AUTOINCREMENT` |
-| `Nombre` | `string` | no | `IsRequired()`, `HasMaxLength(80)` | `TEXT NOT NULL` |
-| `Apellido` | `string` | no | `IsRequired()`, `HasMaxLength(80)` | `TEXT NOT NULL` |
 | `Especialidad` | `string` | no | `IsRequired()`, `HasMaxLength(120)` | `TEXT NOT NULL` |
 | `CreatedAt` | `DateTime` | no | `IsRequired()` (UTC) | `TEXT NOT NULL` |
-| `DeletedAt` | `DateTime?` | sí | query filter global | `TEXT NULL` |
+| `UsuarioId` | `int` | no | FK → `Usuario`, **índice único**, `OnDelete(Restrict)` | `INTEGER NOT NULL` |
+| `Usuario` | `Usuario` | no | `HasOne(p => p.Usuario).WithOne(u => u.Profesional).HasForeignKey<Profesional>(p => p.UsuarioId)` | — |
 | `Turnos` | `ICollection<Turno>` | — | nav inversa de `Turno.Profesional` | — |
-| `Usuario` | `Usuario?` | — | nav inversa 1:0..1 (FK en `Usuario`) | — |
+
+Baja lógica: no tiene `DeletedAt` propio, ver `HasQueryFilter` en la tabla `Usuario`.
 
 ---
 
 ## 3. `Usuario`
 
+Cuenta de acceso **e identidad de la persona**: único dueño de `Nombre` y
+`Apellido`, para cualquier rol (Admin incluido, que no tiene `Profesional`).
+Un `Usuario` **no** requiere tener `Profesional` asociado.
+
 | Columna | Tipo C# | Null | Config EF | Tipo SQLite |
 |---|---|---|---|---|
 | `Id` | `int` | no | PK, identity | `INTEGER PK AUTOINCREMENT` |
 | `Nombre` | `string` | no | `IsRequired()`, `HasMaxLength(160)` — display name para `GET /auth/me` (resuelve el `nombre` del Admin, que no tiene `Profesional`) | `TEXT NOT NULL` |
+| `Apellido` | `string` | no | `IsRequired()`, `HasMaxLength(80)` | `TEXT NOT NULL` |
 | `Email` | `string` | no | `IsRequired()`, `HasMaxLength(256)`, **índice único** | `TEXT NOT NULL` |
 | `PasswordHash` | `string` | no | `IsRequired()`, `HasMaxLength(100)` (BCrypt ≈ 60 chars) | `TEXT NOT NULL` |
 | `Rol` | `Rol` (enum) | no | `IsRequired()`, `HasConversion<int>()` | `INTEGER NOT NULL` |
-| `ProfesionalId` | `int?` | sí | FK → `Profesional`, `OnDelete(Restrict)` | `INTEGER NULL` |
-| `Profesional` | `Profesional?` | — | `HasOne(u => u.Profesional).WithOne(p => p.Usuario).HasForeignKey<Usuario>(u => u.ProfesionalId)` | — |
+| `Profesional` | `Profesional?` | — | nav inversa 1:0..1 (la FK vive en `Profesional.UsuarioId`) | — |
 | `CreatedAt` | `DateTime` | no | `IsRequired()` (UTC) | `TEXT NOT NULL` |
+| `DeletedAt` | `DateTime?` | sí | `HasQueryFilter(u => u.DeletedAt == null)` | `TEXT NULL` |
 | `RefreshTokens` | `ICollection<RefreshToken>` | — | nav inversa | — |
 
-**Invariante** (validada en seed / capa Application, no en DB): `Rol == Admin ⇒ ProfesionalId == null`; `Rol == Profesional ⇒ ProfesionalId != null`.
-*Opcional:* materializarla con `ToTable(t => t.HasCheckConstraint("CK_Usuario_Rol_Profesional", "(\"Rol\" = 0 AND \"ProfesionalId\" IS NULL) OR (\"Rol\" = 1 AND \"ProfesionalId\" IS NOT NULL)"))`.
+**Baja/deshabilitación unificada:** `DeletedAt` cubre tanto "cuenta
+deshabilitada" (cualquier rol) como "profesional dado de baja" — es el mismo
+evento. `ProfesionalConfiguration` reusa este flag:
+`HasQueryFilter(p => p.Usuario.DeletedAt == null)`, así que dar de baja a un
+profesional también le bloquea el login (no hay dos flags independientes que
+puedan desincronizarse).
 
 ---
 
@@ -173,7 +193,7 @@ public void Configure(EntityTypeBuilder<Turno> b)
 ```
 
 ```csharp
-// PacienteConfiguration.cs  (Profesional es análogo)
+// PacienteConfiguration.cs
 public void Configure(EntityTypeBuilder<Paciente> b)
 {
     b.HasKey(p => p.Id);
@@ -192,13 +212,28 @@ public void Configure(EntityTypeBuilder<Usuario> b)
 {
     b.HasKey(u => u.Id);
     b.Property(u => u.Nombre).IsRequired().HasMaxLength(160);
+    b.Property(u => u.Apellido).IsRequired().HasMaxLength(80);
     b.Property(u => u.Email).IsRequired().HasMaxLength(256);
     b.Property(u => u.PasswordHash).IsRequired().HasMaxLength(100);
     b.Property(u => u.Rol).IsRequired().HasConversion<int>();
     b.HasIndex(u => u.Email).IsUnique();
-    b.HasOne(u => u.Profesional).WithOne(p => p.Usuario)
-        .HasForeignKey<Usuario>(u => u.ProfesionalId)
+    b.HasQueryFilter(u => u.DeletedAt == null);
+}
+```
+
+```csharp
+// ProfesionalConfiguration.cs — la FK vive acá (lado obligatorio de la 1:1)
+public void Configure(EntityTypeBuilder<Profesional> b)
+{
+    b.HasKey(p => p.Id);
+    b.Property(p => p.Especialidad).IsRequired().HasMaxLength(120);
+    b.Property(p => p.CreatedAt).IsRequired();
+
+    b.HasOne(p => p.Usuario).WithOne(u => u.Profesional)
+        .HasForeignKey<Profesional>(p => p.UsuarioId)
         .OnDelete(DeleteBehavior.Restrict);
+
+    b.HasQueryFilter(p => p.Usuario.DeletedAt == null);
 }
 ```
 
@@ -219,12 +254,19 @@ public void Configure(EntityTypeBuilder<RefreshToken> b)
 
 ---
 
-## Migración inicial
+## Migraciones
 
 ```bash
 dotnet ef migrations add Init -p src/Infrastructure -s src/Api
 dotnet ef database update -p src/Infrastructure -s src/Api
 ```
+
+- **`Init`** (2026-09-11): esquema inicial de las 5 entidades.
+- **`UnifyUsuarioProfesionalIdentity`** (2026-09-11): mueve `Nombre`/`Apellido`
+  de `Profesional` a `Usuario`; invierte la FK 1:1 (`Profesional.UsuarioId`
+  reemplaza a `Usuario.ProfesionalId`); mueve `DeletedAt` de `Profesional` a
+  `Usuario`. Recrea la DB de dev/demo (sin datos reales que migrar). Detalle
+  completo en `openspec/changes/archive/2026-09-11-unify-usuario-profesional/`.
 
 **Verificar en el migration generado / en el `.db`:**
 
@@ -243,6 +285,7 @@ dotnet ef database update -p src/Infrastructure -s src/Api
 | Tabla | Índice | Único | Filtro |
 |---|---|---|---|
 | `Usuarios` | `Email` | sí | — |
+| `Profesionales` | `UsuarioId` | sí | — |
 | `Turnos` | `(ProfesionalId, Inicio)` | sí | `"Estado" <> 2` |
 | `Turnos` | `(ProfesionalId, PacienteId)` | sí | `"Estado" < 2` |
 | `Turnos` | `Inicio` | no | — |
@@ -261,7 +304,15 @@ dotnet ef database update -p src/Infrastructure -s src/Api
   Fuera de alcance para la prueba.
 - **`Usuario.Nombre`** se agrega respecto del bosquejo del README para poder
   responder `GET /auth/me` con `nombre` también cuando el rol es `Admin`.
-- **Check constraint `Rol`/`ProfesionalId`**: opcional; por defecto se valida en
-  código (seed + Application) para no acoplar el dominio a SQLite.
 - **`CreatedAt`/`UpdatedAt` sin default SQL**: se setean vía `IClock` para tests
   deterministas y para respetar UTC vs. hora local naïve de `Inicio`.
+- **Identidad Usuario/Profesional unificada** (2026-09-11): `Nombre`/`Apellido`
+  y la baja lógica (`DeletedAt`) se centralizaron en `Usuario`; la FK 1:1 se
+  invirtió a `Profesional.UsuarioId` (obligatoria) en vez de
+  `Usuario.ProfesionalId` (nullable). Razón: un profesional siempre requiere
+  usuario, pero un usuario no siempre es profesional (Admin, y a futuro
+  Supervisor/Dueño); mantener dos flags de baja independientes no tenía caso
+  de uso real y solo agregaba riesgo de desincronización. Alternativas
+  descartadas y consecuencias (dar de baja a un profesional ahora también le
+  corta el login) documentadas en
+  `openspec/changes/archive/2026-09-11-unify-usuario-profesional/design.md`.

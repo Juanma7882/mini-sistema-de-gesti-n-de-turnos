@@ -10,20 +10,20 @@ internal sealed class ProfesionalRepository(AppDbContext db) : IProfesionalRepos
     public async Task<(IReadOnlyList<Profesional> Items, int Total)> GetPagedAsync(
         string? search, int page, int pageSize, CancellationToken ct)
     {
-        var query = db.Profesionales.AsNoTracking();
+        IQueryable<Profesional> query = db.Profesionales.AsNoTracking().Include(p => p.Usuario);
 
         if (!string.IsNullOrWhiteSpace(search))
         {
             var s = search.Trim().ToLower();
             query = query.Where(p =>
-                (p.Nombre + " " + p.Apellido).ToLower().Contains(s));
+                (p.Usuario.Nombre + " " + p.Usuario.Apellido).ToLower().Contains(s));
         }
 
         var total = await query.CountAsync(ct);
 
         var items = await query
-            .OrderBy(p => p.Apellido)
-            .ThenBy(p => p.Nombre)
+            .OrderBy(p => p.Usuario.Apellido)
+            .ThenBy(p => p.Usuario.Nombre)
             .ThenBy(p => p.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
@@ -33,7 +33,7 @@ internal sealed class ProfesionalRepository(AppDbContext db) : IProfesionalRepos
     }
 
     public Task<Profesional?> GetByIdAsync(int id, CancellationToken ct) =>
-        db.Profesionales.FirstOrDefaultAsync(p => p.Id == id, ct);
+        db.Profesionales.Include(p => p.Usuario).FirstOrDefaultAsync(p => p.Id == id, ct);
 
     public async Task AddAsync(Profesional profesional, CancellationToken ct) =>
         await db.Profesionales.AddAsync(profesional, ct);

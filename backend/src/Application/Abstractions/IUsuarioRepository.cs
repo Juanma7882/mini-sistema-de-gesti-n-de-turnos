@@ -9,4 +9,6 @@ public interface IUsuarioRepository
     Task<Usuario?> GetByEmailAsync(string email, CancellationToken ct);
 
     Task<Usuario?> GetByIdAsync(int id, CancellationToken ct);
+
+    Task AddAsync(Usuario usuario, CancellationToken ct);
 }

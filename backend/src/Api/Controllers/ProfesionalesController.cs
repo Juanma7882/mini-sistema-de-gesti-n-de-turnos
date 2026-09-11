@@ -39,7 +39,7 @@ public sealed class ProfesionalesController(ProfesionalService service) : ApiCon
 
     [Authorize(Roles = Roles.Admin)]
     [HttpPost]
-    public async Task<ActionResult<ProfesionalDto>> Crear(ProfesionalRequest request, CancellationToken ct)
+    public async Task<ActionResult<ProfesionalDto>> Crear(CrearProfesionalRequest request, CancellationToken ct)
     {
         var profesional = await service.CrearAsync(request, ct);
 

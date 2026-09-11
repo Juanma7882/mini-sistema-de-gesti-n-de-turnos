@@ -29,7 +29,7 @@ internal sealed class TurnoRepository(AppDbContext db) : ITurnoRepository
     public Task<Turno?> GetByIdAsync(int id, CancellationToken ct) =>
         db.Turnos
             .Include(t => t.Paciente)
-            .Include(t => t.Profesional)
+            .Include(t => t.Profesional).ThenInclude(p => p.Usuario)
             // El paciente/profesional puede haberse dado de baja después de un
             // turno ya cerrado; igual queremos mostrarlo en el detalle/listado.
             .IgnoreQueryFilters()
@@ -78,7 +78,7 @@ internal sealed class TurnoRepository(AppDbContext db) : ITurnoRepository
     {
         var query = db.Turnos
             .Include(t => t.Paciente)
-            .Include(t => t.Profesional)
+            .Include(t => t.Profesional).ThenInclude(p => p.Usuario)
             .IgnoreQueryFilters()
             .AsQueryable();
 

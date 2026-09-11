@@ -10,11 +10,14 @@ internal sealed class ProfesionalConfiguration : IEntityTypeConfiguration<Profes
     {
         b.HasKey(p => p.Id);
 
-        b.Property(p => p.Nombre).IsRequired().HasMaxLength(80);
-        b.Property(p => p.Apellido).IsRequired().HasMaxLength(80);
         b.Property(p => p.Especialidad).IsRequired().HasMaxLength(120);
         b.Property(p => p.CreatedAt).IsRequired();
 
-        b.HasQueryFilter(p => p.DeletedAt == null);
+        b.HasOne(p => p.Usuario)
+            .WithOne(u => u.Profesional)
+            .HasForeignKey<Profesional>(p => p.UsuarioId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        b.HasQueryFilter(p => p.Usuario.DeletedAt == null);
     }
 }

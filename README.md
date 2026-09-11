@@ -77,6 +77,8 @@ Se siembran automáticamente al arrancar si la base está vacía.
 |---|---|---|
 | Administrador | `admin@clinica.test` | valor de `Seed__AdminPassword` |
 | Profesional | `dra.gomez@clinica.test` | valor de `Seed__ProfessionalPassword` |
+| Profesional | `dr.fernandez@clinica.test` | valor de `Seed__ProfessionalPassword` |
+| Profesional | `dra.ruiz@clinica.test` | valor de `Seed__ProfessionalPassword` |
 
 Todos los pacientes, profesionales y turnos de ejemplo son **ficticios**.
 
@@ -145,9 +147,14 @@ excepto `POST /auth/login` y `POST /auth/refresh`.
 |---|---|---|---|---|
 | GET | `/profesionales?search=&page=&pageSize=` | — | **200** `{ items, total, ... }` | 401 · 403 |
 | GET | `/profesionales/{id}` | — | **200** `ProfesionalDto` | 401 · 403 · 404 |
-| POST | `/profesionales` | `{ nombre, apellido, especialidad }` | **201** `ProfesionalDto` | 400 · 401 · 403 |
+| POST | `/profesionales` | `{ nombre, apellido, especialidad, email, password }` | **201** `ProfesionalDto` | 400 · 401 · 403 · **409** email ya registrado |
 | PUT | `/profesionales/{id}` | `{ nombre, apellido, especialidad }` | **200** `ProfesionalDto` | 400 · 401 · 403 · 404 |
 | DELETE | `/profesionales/{id}` | — | **204** (soft delete) | 401 · 403 · 404 · **409** tiene turnos activos |
+
+> `POST /profesionales` crea el profesional **y** su cuenta de acceso
+> (`Rol.Profesional`) en una sola operación — un profesional nunca existe sin
+> usuario para loguearse. `email`/`password` no van en `PUT`: editar no
+> re-registra credenciales, solo datos (nombre/apellido/especialidad).
 
 ### Turnos
 

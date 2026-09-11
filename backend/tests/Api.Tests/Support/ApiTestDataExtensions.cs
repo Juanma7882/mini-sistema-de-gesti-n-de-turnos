@@ -35,11 +35,13 @@ public static class ApiTestDataExtensions
         sufijo ??= Guid.NewGuid().ToString("N")[..8];
         var response = await admin.PostAsJsonAsync(
             "/api/profesionales",
-            new ProfesionalRequest
+            new CrearProfesionalRequest
             {
                 Nombre = "Test",
                 Apellido = $"Profesional-{sufijo}",
                 Especialidad = "Clínica médica",
+                Email = $"profesional-{sufijo}@test.local",
+                Password = "Password123*",
             },
             ApiJson.Options);
         response.EnsureSuccessStatusCode();

@@ -160,7 +160,7 @@ public sealed class TurnoService(
     private async Task GarantizarProfesionalActivoAsync(int profesionalId, CancellationToken ct)
     {
         var profesional = await profesionales.GetByIdAsync(profesionalId, ct);
-        if (profesional is null || profesional.DeletedAt is not null)
+        if (profesional is null)
         {
             throw NotFoundException.Para("Profesional", profesionalId);
         }

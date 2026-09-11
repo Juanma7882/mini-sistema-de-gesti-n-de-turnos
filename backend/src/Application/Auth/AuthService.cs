@@ -82,6 +82,6 @@ public sealed class AuthService(
         Nombre = usuario.Nombre,
         Email = usuario.Email,
         Role = usuario.Rol,
-        ProfesionalId = usuario.ProfesionalId,
+        ProfesionalId = usuario.Profesional?.Id,
     };
 }

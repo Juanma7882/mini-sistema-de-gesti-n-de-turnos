@@ -18,4 +18,7 @@ internal sealed class UsuarioRepository(AppDbContext db) : IUsuarioRepository
         db.Usuarios
             .Include(u => u.Profesional)
             .FirstOrDefaultAsync(u => u.Id == id, ct);
+
+    public async Task AddAsync(Usuario usuario, CancellationToken ct) =>
+        await db.Usuarios.AddAsync(usuario, ct);
 }

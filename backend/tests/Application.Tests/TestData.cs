@@ -29,14 +29,28 @@ internal static class TestData
         DeletedAt = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc),
     };
 
-    public static Profesional ProfesionalActivo(int id, string nombre = "Laura", string apellido = "Gomez") => new()
+    public static Profesional ProfesionalActivo(int id, string nombre = "Laura", string apellido = "Gomez")
     {
-        Id = id,
-        Nombre = nombre,
-        Apellido = apellido,
-        Especialidad = "Clinica",
-        CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-    };
+        var usuario = new Usuario
+        {
+            Id = id,
+            Nombre = nombre,
+            Apellido = apellido,
+            Email = $"{nombre}.{apellido}@clinica.test".ToLowerInvariant(),
+            PasswordHash = "hash:secret",
+            Rol = Rol.Profesional,
+            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+        };
+        var profesional = new Profesional
+        {
+            Id = id,
+            Especialidad = "Clinica",
+            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            Usuario = usuario,
+        };
+        usuario.Profesional = profesional;
+        return profesional;
+    }
 
     public static Turno Turno(
         int id,
@@ -58,21 +72,32 @@ internal static class TestData
     {
         Id = id,
         Nombre = "Admin",
+        Apellido = string.Empty,
         Email = email,
         PasswordHash = "hash:secret",
         Rol = Rol.Admin,
-        ProfesionalId = null,
         CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
     };
 
-    public static Usuario Profesional(int id, int profesionalId, string email) => new()
+    public static Usuario Profesional(int id, int profesionalId, string email)
     {
-        Id = id,
-        Nombre = "Profesional",
-        Email = email,
-        PasswordHash = "hash:secret",
-        Rol = Rol.Profesional,
-        ProfesionalId = profesionalId,
-        CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-    };
+        var usuario = new Usuario
+        {
+            Id = id,
+            Nombre = "Profesional",
+            Apellido = "Apellido",
+            Email = email,
+            PasswordHash = "hash:secret",
+            Rol = Rol.Profesional,
+            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+        };
+        usuario.Profesional = new Profesional
+        {
+            Id = profesionalId,
+            Especialidad = "Clinica",
+            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            Usuario = usuario,
+        };
+        return usuario;
+    }
 }

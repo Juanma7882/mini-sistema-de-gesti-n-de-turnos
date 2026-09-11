@@ -6,6 +6,7 @@ using Turnos.Application.Turnos;
 using Turnos.Domain.Pacientes;
 using Turnos.Domain.Profesionales;
 using Turnos.Domain.Turnos;
+using Turnos.Domain.Usuarios;
 
 namespace Turnos.Infrastructure.Tests;
 
@@ -124,10 +125,17 @@ public sealed class TurnoRepositoryTests(SqliteDatabaseFixture fixture)
         var profesionales = scope.ServiceProvider.GetRequiredService<IProfesionalRepository>();
         var profesional = new Profesional
         {
-            Nombre = "Pro",
-            Apellido = sufijo,
             Especialidad = "Test",
             CreatedAt = DateTime.UtcNow,
+            Usuario = new Usuario
+            {
+                Nombre = "Pro",
+                Apellido = sufijo,
+                Email = $"pro.{sufijo}@test.local",
+                PasswordHash = "hash:test",
+                Rol = Rol.Profesional,
+                CreatedAt = DateTime.UtcNow,
+            },
         };
         await profesionales.AddAsync(profesional, Ct);
         await profesionales.SaveChangesAsync(Ct);

@@ -2,12 +2,17 @@ using Turnos.Application.Abstractions;
 using Turnos.Application.Common;
 using Turnos.Application.Common.Exceptions;
 using Turnos.Domain.Profesionales;
+using Turnos.Domain.Usuarios;
 
 namespace Turnos.Application.Profesionales;
 
 /// <summary>Casos de uso del ABM de profesionales. En la Api, lectura para
 /// cualquier autenticado y escritura solo Admin.</summary>
-public sealed class ProfesionalService(IProfesionalRepository repository, IClock clock)
+public sealed class ProfesionalService(
+    IProfesionalRepository repository,
+    IUsuarioRepository usuarios,
+    IPasswordHasher passwordHasher,
+    IClock clock)
 {
     public async Task<PagedResult<ProfesionalDto>> ListarAsync(
         string? search, PageRequest page, CancellationToken ct)
@@ -32,17 +37,43 @@ public sealed class ProfesionalService(IProfesionalRepository repository, IClock
         return ProfesionalMapper.ToDto(profesional);
     }
 
-    public async Task<ProfesionalDto> CrearAsync(ProfesionalRequest request, CancellationToken ct)
+    /// <summary>Crea el profesional junto con su cuenta de acceso: un profesional
+    /// nunca existe sin usuario. <c>409</c> si el email ya está registrado.
+    /// Un único <c>SaveChanges</c> (ambos repos comparten el <c>AppDbContext</c>
+    /// scoped) persiste las dos entidades en una sola transacción; la FK
+    /// <see cref="Profesional.UsuarioId"/> la resuelve el relationship fixup de
+    /// EF Core a partir de la navegación <see cref="Profesional.Usuario"/>.</summary>
+    public async Task<ProfesionalDto> CrearAsync(CrearProfesionalRequest request, CancellationToken ct)
     {
-        var profesional = new Profesional
+        var email = request.Email.Trim();
+        if (await usuarios.GetByEmailAsync(email, ct) is not null)
         {
-            Nombre = TextoNormalizer.NombrePropio(request.Nombre),
-            Apellido = TextoNormalizer.NombrePropio(request.Apellido),
-            Especialidad = request.Especialidad.Trim(),
+            throw new ConflictException("Ya existe un usuario registrado con ese email.");
+        }
+
+        var nombre = TextoNormalizer.NombrePropio(request.Nombre);
+        var apellido = TextoNormalizer.NombrePropio(request.Apellido);
+
+        var usuario = new Usuario
+        {
+            Nombre = nombre,
+            Apellido = apellido,
+            Email = email,
+            PasswordHash = passwordHasher.Hash(request.Password),
+            Rol = Rol.Profesional,
             CreatedAt = clock.UtcNow,
         };
 
+        var profesional = new Profesional
+        {
+            Especialidad = request.Especialidad.Trim(),
+            CreatedAt = clock.UtcNow,
+            Usuario = usuario,
+        };
+        usuario.Profesional = profesional;
+
         await repository.AddAsync(profesional, ct);
+        await usuarios.AddAsync(usuario, ct);
         await repository.SaveChangesAsync(ct);
 
         return ProfesionalMapper.ToDto(profesional);
@@ -54,8 +85,8 @@ public sealed class ProfesionalService(IProfesionalRepository repository, IClock
         var profesional = await repository.GetByIdAsync(id, ct)
             ?? throw NotFoundException.Para("Profesional", id);
 
-        profesional.Nombre = TextoNormalizer.NombrePropio(request.Nombre);
-        profesional.Apellido = TextoNormalizer.NombrePropio(request.Apellido);
+        profesional.Usuario.Nombre = TextoNormalizer.NombrePropio(request.Nombre);
+        profesional.Usuario.Apellido = TextoNormalizer.NombrePropio(request.Apellido);
         profesional.Especialidad = request.Especialidad.Trim();
 
         repository.Update(profesional);
@@ -64,17 +95,14 @@ public sealed class ProfesionalService(IProfesionalRepository repository, IClock
         return ProfesionalMapper.ToDto(profesional);
     }
 
-    /// <summary>Baja lógica. <c>409</c> si el profesional tiene turnos activos
-    /// (<c>Pendiente</c>/<c>Confirmado</c>). Idempotente si ya estaba dado de baja.</summary>
+    /// <summary>Baja lógica: deshabilita la cuenta del usuario asociado
+    /// (<see cref="Usuario.DeletedAt"/>), lo que también le corta el login.
+    /// <c>409</c> si el profesional tiene turnos activos
+    /// (<c>Pendiente</c>/<c>Confirmado</c>).</summary>
     public async Task BajaAsync(int id, CancellationToken ct)
     {
         var profesional = await repository.GetByIdAsync(id, ct)
             ?? throw NotFoundException.Para("Profesional", id);
-
-        if (profesional.DeletedAt is not null)
-        {
-            return;
-        }
 
         if (await repository.TieneTurnosActivosAsync(id, ct))
         {
@@ -82,7 +110,7 @@ public sealed class ProfesionalService(IProfesionalRepository repository, IClock
                 "El profesional tiene turnos activos y no puede darse de baja.");
         }
 
-        profesional.DeletedAt = clock.UtcNow;
+        profesional.Usuario.DeletedAt = clock.UtcNow;
         repository.Update(profesional);
         await repository.SaveChangesAsync(ct);
     }

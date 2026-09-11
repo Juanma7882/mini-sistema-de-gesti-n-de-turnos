@@ -31,13 +31,41 @@ internal sealed class DbSeeder(
         var now = clock.UtcNow;
         var options = seedOptions.Value;
 
+        var profesionalPasswordHash = hasher.Hash(
+            Fallback(options.ProfessionalPassword, ProfesionalPasswordFallback));
+
+        Profesional NuevoProfesional(string nombre, string apellido, string especialidad, string email) => new()
+        {
+            Especialidad = especialidad,
+            CreatedAt = now,
+            Usuario = new Usuario
+            {
+                Nombre = nombre,
+                Apellido = apellido,
+                Email = email,
+                PasswordHash = profesionalPasswordHash,
+                Rol = Rol.Profesional,
+                CreatedAt = now,
+            },
+        };
+
         var profesionales = new List<Profesional>
         {
-            new() { Nombre = "Laura", Apellido = "Gómez", Especialidad = "Clínica médica", CreatedAt = now },
-            new() { Nombre = "Diego", Apellido = "Fernández", Especialidad = "Cardiología", CreatedAt = now },
-            new() { Nombre = "Marta", Apellido = "Ruiz", Especialidad = "Pediatría", CreatedAt = now },
+            NuevoProfesional("Laura", "Gómez", "Clínica médica", "dra.gomez@clinica.test"),
+            NuevoProfesional("Diego", "Fernández", "Cardiología", "dr.fernandez@clinica.test"),
+            NuevoProfesional("Marta", "Ruiz", "Pediatría", "dra.ruiz@clinica.test"),
         };
         db.Profesionales.AddRange(profesionales);
+
+        db.Usuarios.Add(new Usuario
+        {
+            Nombre = "Administración",
+            Apellido = string.Empty,
+            Email = "admin@clinica.test",
+            PasswordHash = hasher.Hash(Fallback(options.AdminPassword, AdminPasswordFallback)),
+            Rol = Rol.Admin,
+            CreatedAt = now,
+        });
 
         var pacientes = new List<Paciente>
         {
@@ -50,26 +78,6 @@ internal sealed class DbSeeder(
         db.Pacientes.AddRange(pacientes);
 
         await db.SaveChangesAsync(ct);
-
-        db.Usuarios.AddRange(
-            new Usuario
-            {
-                Nombre = "Administración",
-                Email = "admin@clinica.test",
-                PasswordHash = hasher.Hash(Fallback(options.AdminPassword, AdminPasswordFallback)),
-                Rol = Rol.Admin,
-                CreatedAt = now,
-            },
-            new Usuario
-            {
-                Nombre = "Laura Gómez",
-                Email = "dra.gomez@clinica.test",
-                PasswordHash = hasher.Hash(
-                    Fallback(options.ProfessionalPassword, ProfesionalPasswordFallback)),
-                Rol = Rol.Profesional,
-                ProfesionalId = profesionales[0].Id,
-                CreatedAt = now,
-            });
 
         var baseDia = clock.LocalNow.Date.AddDays(1);
         db.Turnos.AddRange(
