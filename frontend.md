@@ -12,12 +12,16 @@ rol **Paciente** NO entra acá (ver `openspec/changes/add-patient-self-service/t
 
 ## 1. Scaffolding
 
-- [ ] 1.1 `npm create vite@latest frontend -- --template react-ts`; limpiar boilerplate.
-- [ ] 1.2 Tailwind CSS: instalar, `tailwind.config`, directivas en `index.css`.
-- [ ] 1.3 shadcn/ui: `init` + tema base; añadir componentes que se usan (`button`, `input`, `select`, `dialog`, `table`, `badge`, `sonner/toast`, `form`, `dropdown-menu`, `calendar`, `popover`).
-- [ ] 1.4 React Router: `createBrowserRouter`, layout raíz, rutas `/login`, `/turnos`, `/pacientes`, `/profesionales`, `*` (404).
-- [ ] 1.5 Estructura de carpetas según `arquitectura-frontend.md` §2 (`src/{app,core,shared,features,pages,styles,tests}`); `.env.example` con `VITE_API_URL`.
-- [ ] 1.6 ESLint + Prettier + script `typecheck`; verificar `npm run dev` y `npm run build`.
+> Hecho con **pnpm** (no npm). Toolchain: Vite 8 · React 19 · TS 6 · Tailwind v4
+> (`@tailwindcss/vite`, CSS-first) · Vitest. `pnpm typecheck`, `pnpm lint`,
+> `pnpm build` y `pnpm test` pasan en verde.
+
+- [x] 1.1 `pnpm create vite@latest frontend --template react-ts`; boilerplate limpiado.
+- [x] 1.2 Tailwind CSS v4: plugin `@tailwindcss/vite`, `@import 'tailwindcss'` + `@theme` en `styles/index.css`.
+- [ ] 1.3 shadcn/ui: `init` + tema base; añadir componentes que se usan (`button`, `input`, `select`, `dialog`, `table`, `badge`, `sonner/toast`, `form`, `dropdown-menu`, `calendar`, `popover`). Carpeta `src/shared/components/ui/` lista con nota.
+- [x] 1.4 React Router: `createBrowserRouter`, layout raíz, rutas `/login`, `/turnos`, `/pacientes`, `/profesionales`, `/403`, `*` (404).
+- [x] 1.5 Estructura de carpetas según `arquitectura-frontend.md` §2 (`src/{app,core,shared,features,pages,styles,tests}`); `.env.example` con `VITE_API_URL`.
+- [x] 1.6 ESLint (flat config) + Prettier + script `typecheck`; `pnpm dev` y `pnpm build` verificados.
 
 ## 2. Cliente HTTP y sesión
 

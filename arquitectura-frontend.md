@@ -48,10 +48,9 @@ tras una mutación) se maneja con hooks propios de la feature
 ```
 frontend/                          ← junto a backend/
   index.html
-  vite.config.ts
-  tailwind.config.ts · postcss.config.js
-  components.json                  ← config del CLI de shadcn/ui
-  tsconfig.json                    ← "strict": true, sin path aliases (ver §6)
+  vite.config.ts                   ← plugins: react() + tailwindcss() (Tailwind v4, sin postcss.config)
+  components.json                  ← config del CLI de shadcn/ui (se crea al correr `shadcn init`)
+  tsconfig.json / tsconfig.app.json / tsconfig.node.json   ← "strict": true, sin path aliases (ver §6)
   .env.example                     ← VITE_API_URL=
   eslint.config.js · .prettierrc
   src/
@@ -216,14 +215,18 @@ forma dentro de cada feature.
 
 ### 3.7 Tailwind y shadcn/ui
 
+- **Tailwind v4**: se carga con el plugin `@tailwindcss/vite` en `vite.config.ts`
+  (sin `postcss.config.js`). La config es CSS-first: `styles/index.css` hace
+  `@import 'tailwindcss'` y define los tokens en un bloque `@theme`. No hay
+  `tailwind.config.ts` salvo que el CLI de shadcn lo pida.
 - Clases de utilidad en el JSX; combinaciones condicionales con `cn(...)` de
   `shared/lib/cn.ts`. Sin CSS Modules ni styled-components.
 - Los componentes que genera el CLI de shadcn se copian a
   `shared/components/ui/` y **se editan libremente** (son código del repo, no una
   dependencia). Tras generarlos, ajustar los imports que el CLI deja con alias
   `@/` a rutas relativas (ver §6).
-- Tokens de color / radios en `styles/index.css` y `tailwind.config.ts`; un solo
-  tema, sin dark mode en esta entrega.
+- Tokens de color / radios en el `@theme` de `styles/index.css`; un solo tema,
+  sin dark mode en esta entrega.
 
 ### 3.8 Tests
 
