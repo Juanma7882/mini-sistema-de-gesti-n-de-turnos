@@ -20,6 +20,6 @@ public sealed class PacienteRequestValidator : AbstractValidator<PacienteRequest
 
         RuleFor(x => x.ObraSocial)
             .NotEmpty()
-            .MaximumLength(80);
+            .MaximumLength(120);
     }
 }

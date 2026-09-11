@@ -16,6 +16,6 @@ public sealed class ProfesionalRequestValidator : AbstractValidator<ProfesionalR
 
         RuleFor(x => x.Especialidad)
             .NotEmpty()
-            .MaximumLength(80);
+            .MaximumLength(120);
     }
 }
