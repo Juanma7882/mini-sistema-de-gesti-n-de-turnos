@@ -30,21 +30,21 @@ deploy/CI. Tareas de máx. ~2 h. El rol **Paciente** NO entra acá (ver
 
 ## 3. Infrastructure — persistencia
 
-- [ ] 3.1 `AppDbContext` con `DbSet` de las 5 entidades.
-- [ ] 3.2 Configuración EF por entidad: `Estado`/`Rol` como `int`, `Email` índice único, FKs, `DeletedAt` filtro de consulta global (soft delete) en Paciente/Profesional.
-- [ ] 3.3 Dos índices únicos parciales vía `HasFilter(...)`:
-  - `UNIQUE (ProfesionalId, Inicio) WHERE Estado <> 2` — anti doble-turno (slot exacto).
-  - `UNIQUE (ProfesionalId, PacienteId) WHERE Estado < 2` — un paciente no puede tener 2+ turnos activos (`Pendiente`/`Confirmado`) con el mismo profesional.
-- [ ] 3.4 Migración inicial `Init`; verificar `dotnet ef database update` sobre base limpia crea el `.db` y el índice parcial.
-- [ ] 3.5 `ConnectionStrings__Default` desde config; registrar `AppDbContext` en DI.
+- [x] 3.1 `AppDbContext` (`internal sealed`) con `DbSet` de las 5 entidades + `ApplyConfigurationsFromAssembly`. `AppDbContextFactory` (`IDesignTimeDbContextFactory`) para que `dotnet ef` no arranque el host.
+- [x] 3.2 Un `IEntityTypeConfiguration<T>` por entidad en `Persistence/Configurations/`: `Estado`/`Rol` como `int` (`HasConversion<int>()`), `Email` y `TokenHash` índice único, FKs `Restrict` (salvo `RefreshToken → Usuario` `Cascade`), `DeletedAt` query filter global en Paciente/Profesional.
+- [x] 3.3 Dos índices únicos parciales vía `HasFilter(...)` en `TurnoConfiguration`:
+  - `UNIQUE (ProfesionalId, Inicio) WHERE "Estado" <> 2` — anti doble-turno (slot exacto).
+  - `UNIQUE (ProfesionalId, PacienteId) WHERE "Estado" < 2` — un paciente no puede tener 2+ turnos activos (`Pendiente`/`Confirmado`) con el mismo profesional.
+- [x] 3.4 Migración inicial `Init` (`Persistence/Migrations/`); verificado con `dotnet ef database update` sobre base limpia: los dos `CREATE UNIQUE INDEX ... WHERE` salen bien, enums `INTEGER`.
+- [x] 3.5 Repos EF (`internal`) por agregado implementando las interfaces de Application: `AsNoTracking` + `Include` explícito en lecturas; `TurnoRepository.SaveChangesAsync` captura `DbUpdateException` de cualquiera de los dos índices → `ConflictException`. `AddInfrastructure(IConfiguration)` registra `AppDbContext` (Sqlite desde `ConnectionStrings:Default`), repos `Scoped`. Extensión pública `IServiceProvider.MigrateAndSeedAsync()` (no filtra `AppDbContext`/`DbSeeder`).
 
 ## 4. Infrastructure — auth y seed
 
-- [ ] 4.1 `IPasswordHasher` + impl BCrypt (`Hash` / `Verify`).
-- [ ] 4.2 `IJwtTokenService`: emite access token HS256 con claims `sub`, `email`, `role`, `profesionalId?`; lee `Jwt__*` de config.
-- [ ] 4.3 `IRefreshTokenService`: genera token opaco aleatorio, guarda hash SHA-256, valida, **revoke-on-use** (marca `RevokedAt` + `ReplacedByHash` y emite nuevo).
-- [ ] 4.4 `IClock` (`UtcNow` / hora local naïve de clínica) para expiraciones y validación "a futuro".
-- [ ] 4.5 Seeder: si la base está vacía, crea usuario Admin (`admin@clinica.test`) y Profesional (`dra.gomez@clinica.test`) con password desde `Seed__*`, + pacientes/profesionales/turnos ficticios de demo.
+- [x] 4.1 `BcryptPasswordHasher : IPasswordHasher` (`BCrypt.Net-Next`).
+- [x] 4.2 `JwtTokenService : IJwtTokenService`: access token HS256 con claims `sub`, `email`, `role` (`ClaimTypes.Role`), `profesionalId` (solo Profesional); `JwtOptions` (`Infrastructure/Auth/`, sección `Jwt`), expiración por `AccessMinutes`.
+- [x] 4.3 `RefreshTokenService : IRefreshTokenService`: token opaco de 32 bytes hex, persiste solo el SHA-256, `RotateAsync` revoke-on-use (`RevokedAt` + `ReplacedByHash` + emite nuevo), `RevokeAsync` idempotente. Usa `IRefreshTokenRepository`.
+- [x] 4.4 `SystemClock : IClock` (`Singleton`): `UtcNow` = `DateTime.UtcNow`; `LocalNow` = hora de `ClockOptions.TimeZoneId` (default `America/Argentina/Buenos_Aires`) como `Unspecified`, con fallback a `TimeZoneInfo.Local`.
+- [x] 4.5 `DbSeeder` (`internal`, lo corre `MigrateAndSeedAsync`): si no hay usuarios, crea Admin (`admin@clinica.test`) y Profesional (`dra.gomez@clinica.test`) con password de `Seed__*` (fallback fijo de dev si vacío) + 3 profesionales, 5 pacientes y 6 turnos de demo (pares y horarios que respetan ambos índices parciales).
 
 ## 5. Application — contratos, DTOs y casos de uso
 
