@@ -16,7 +16,7 @@ export function Navbar() {
   }
 
   return (
-    <div className="flex w-full items-center gap-2.5">
+    <div className="flex w-full items-center gap-2.5 font-poppins">
       <InitialsBadge nombre={user.nombre} />
       <div className="flex min-w-0 flex-1 flex-col leading-tight">
         <span className="truncate text-sm font-medium text-foreground">{user.nombre}</span>
