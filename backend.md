@@ -17,7 +17,7 @@ deploy/CI. Tareas de máx. ~2 h. El rol **Paciente** NO entra acá (ver
 - [x] 1.3 Referencias entre proyectos: Api→Application+Infrastructure, Infrastructure→Application, Application→Domain. Domain sin dependencias.
 - [x] 1.4 Borrar endpoint/record `WeatherForecast`; `Program.cs` mínimo que arranca y responde `GET /health` → 200.
 - [x] 1.5 Paquetes base: EF Core + `Microsoft.EntityFrameworkCore.Sqlite` + Design, `BCrypt.Net-Next`, `Microsoft.AspNetCore.Authentication.JwtBearer`, `FluentValidation`, `Swashbuckle`. Fijar EF/Mvc.Testing a `9.0.x` (sin versión, NuGet trae `10.0.x` → net10, incompatible).
-- [ ] 1.6 `.gitignore`: `appsettings.Development.json`, `*.db`, `bin/`, `obj/`. `appsettings.json` con claves vacías/placeholder (sin secretos).
+- [x] 1.6 `.gitignore`: `appsettings.Development.json`, `*.db`, `bin/`, `obj/`. `appsettings.json` con claves vacías/placeholder (sin secretos).
 
 ## 2. Domain
 
@@ -105,43 +105,100 @@ implementa esas interfaces. Orden: A → B → (C ∥ E) → D → F.
 
 ## 6. Api — pipeline y auth
 
-- [ ] 6.1 `Program.cs`: DI de todas las capas, `AddDbContext`, `AddValidatorsFromAssembly`, Swagger con botón Bearer.
-- [ ] 6.2 `AddAuthentication().AddJwtBearer(...)` con `Jwt__*`; `AddAuthorization` con policy/roles `Admin` y `Profesional`.
-- [ ] 6.3 CORS: origins desde `Cors__AllowedOrigins`, `AllowCredentials` (cookie de refresh).
-- [ ] 6.4 Middleware de excepciones → `ProblemDetails` RFC 7807 (400 con `errors` por campo, 401/403/404/409/500).
-- [ ] 6.5 Helper para leer `role` y `profesionalId` del `ClaimsPrincipal` (`CurrentUser`).
+Endpoints con **controladores** (`[ApiController]`), no minimal APIs. Prefijo
+global `/api` vía `[Route("api/[controller]")]`. `Program.cs` solo compone las tres
+capas y arma el pipeline; NO re-registra lo que ya vive en cada capa (`AddDbContext`
+está en `AddInfrastructure`, `AddValidatorsFromAssembly` en `AddApplication`).
+
+- [x] 6.1 `Program.cs`: `builder.Services.AddApplication().AddInfrastructure(builder.Configuration).AddApi(builder.Configuration)`. Pipeline en orden: `UseExceptionHandler` → Swagger (solo Development) → `UseCors("frontend")` → `UseAuthentication` → `UseAuthorization` → `MapControllers`. Conserva `MapGet("/health")` y `public partial class Program;` (los usa `WebApplicationFactory`, §10.1). Al arrancar, `await app.Services.MigrateAndSeedAsync()` (crea/actualiza `turnos.db` y siembra si está vacía).
+- [x] 6.2 `Api/DependencyInjection.cs` → `AddApi(IConfiguration)`: `AddControllers(o => o.Filters.Add<ValidationFilter>())` con `JsonStringEnumConverter` y `ApiBehaviorOptions.SuppressModelStateInvalidFilter = true` (el 400 lo arma el filtro de 6.7, no el `[ApiController]` por defecto). `AddHttpContextAccessor()`, `AddScoped<ICurrentUser, CurrentUser>()`, `AddScoped<ValidationFilter>()`, `AddProblemDetails()`, Swagger gen con `AddSecurityDefinition("Bearer", …)` + `AddSecurityRequirement` (botón Authorize). Registra la policy CORS `frontend` (6.3).
+- [x] 6.3 CORS: policy `frontend` con orígenes de `Cors:AllowedOrigins` (string CSV → `Split(',', RemoveEmptyEntries | TrimEntries)`), `AllowCredentials()` + `AllowAnyHeader()` + `AllowAnyMethod()` (nunca `AllowAnyOrigin()` con credentials — la cookie `rt` lo exige). Si la clave está vacía, default de dev `http://localhost:5173`.
+- [x] 6.4 `AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(...)` leyendo la sección `Jwt` (`Jwt__*`): `TokenValidationParameters` con `ValidateIssuer/Audience/Lifetime/IssuerSigningKey = true`, `IssuerSigningKey` = `SymmetricSecurityKey` de `Jwt:Secret`, `ClockSkew = TimeSpan.Zero`. **`options.MapInboundClaims = false`**; `RoleClaimType = ClaimTypes.Role`, `NameClaimType = JwtRegisteredClaimNames.Sub` — `JwtTokenService` emite `sub`/`role` crudos y el helper de 6.5 los lee tal cual (sin este ajuste `[Authorize(Roles=…)]` y la lectura de `sub` se rompen). `AddAuthorization` con policies/roles `Admin` y `Profesional`.
+- [x] 6.5 `Api/Auth/CurrentUser : ICurrentUser` sobre `IHttpContextAccessor`: `IsAuthenticated` de `User.Identity`; `UsuarioId` = `int.Parse(sub)`; `Rol` = `Enum.Parse<Rol>(role)`; `ProfesionalId` = claim `profesionalId` como `int?` (null para Admin). Registrado `Scoped` en 6.2.
+- [x] 6.6 `Api/Errors/ExceptionHandler : IExceptionHandler` (usa `AddProblemDetails()` de 6.2): `ValidationException`→400 con `errors` por campo · `UnauthorizedException`→401 · `ForbiddenException`→403 · `NotFoundException`→404 · `ConflictException`→409 · resto→500. Cuerpo `ProblemDetails` RFC 7807 (`type`/`title`/`status`/`detail`, `errors` solo en el 400). No filtra stack traces fuera de Development. Enganchado con `UseExceptionHandler` (6.1).
+- [x] 6.7 `Api/Filters/ValidationFilter : IAsyncActionFilter` (global, §6.2): por cada argumento no nulo de la acción resuelve `IValidator<T>` del `IServiceProvider` (si está registrado), corre `ValidateAsync`; si falla, agrupa los errores en `IReadOnlyDictionary<string, string[]>` (propiedad → mensajes) y lanza `ValidationException` (→ 400 vía 6.6). Cubre 5.8–5.11 (los validadores ya existen, solo faltaba quién los dispara).
 
 ## 7. Api — endpoints Auth
 
-- [ ] 7.1 `POST /auth/login` → 200 `{ token, user }` + `Set-Cookie: rt` (`httpOnly`, `Secure`, `SameSite`, `Path=/auth/refresh`); 401 credenciales inválidas.
-- [ ] 7.2 `POST /auth/refresh` (lee cookie `rt`) → 200 `{ token }` + cookie rotada; 401 si ausente/expirada/revocada.
-- [ ] 7.3 `POST /auth/logout` (Bearer) → 204, revoca el `rt` y borra la cookie.
-- [ ] 7.4 `GET /auth/me` (Bearer) → 200 `{ id, nombre, email, role, profesionalId? }`.
+Rutas reales bajo `/api/auth` (prefijo de §6). Cookie `rt` con `Path=/api/auth`
+(no `/api/auth/refresh` angosto como se pensó originalmente): `logout` también
+necesita leerla para revocar, y con un `Path` más angosto el navegador no la
+manda ahí. `SameSite=None` + `Secure` porque front (Vercel) y back (Railway) son
+orígenes distintos — exige https también en dev (perfil `https` de
+`launchSettings.json`).
+
+- [x] 7.1 `POST /auth/login` → 200 `{ token, user }` + `Set-Cookie: rt` (`httpOnly`, `Secure`, `SameSite=None`, `Path=/api/auth`); 401 credenciales inválidas.
+- [x] 7.2 `POST /auth/refresh` (lee cookie `rt`) → 200 `{ token }` + cookie rotada; 401 si ausente/expirada/revocada.
+- [x] 7.3 `POST /auth/logout` (Bearer) → 204, revoca el `rt` y borra la cookie.
+- [x] 7.4 `GET /auth/me` (Bearer) → 200 `{ id, nombre, email, role, profesionalId? }`.
 
 ## 8. Api — endpoints Pacientes y Profesionales (solo Admin)
 
-- [ ] 8.1 `GET /pacientes?search=&page=&pageSize=` y `GET /pacientes/{id}` con `[Authorize(Roles="Admin")]`.
-- [ ] 8.2 `POST /pacientes` → 201 + `Location`; `PUT /pacientes/{id}` → 200; `DELETE /pacientes/{id}` → 204 / 409.
-- [ ] 8.3 `GET /profesionales` y `GET /profesionales/{id}`: lectura para cualquier autenticado; escritura solo Admin.
-- [ ] 8.4 `POST/PUT/DELETE /profesionales` (Admin) → 201/200/204, 409 en baja con turnos activos.
+`page`/`pageSize` se bindean como `[FromQuery] int` sueltos, no como `PageRequest`
+directo: el nombre del parámetro `page` choca con la propiedad `PageRequest.Page`
+y el model binder no resuelve un query string plano (`?page=1&pageSize=2` volvía
+con los defaults del record). El controlador arma el `PageRequest` a mano.
+
+- [x] 8.1 `GET /pacientes?search=&page=&pageSize=` y `GET /pacientes/{id}` con `[Authorize(Roles="Admin")]`.
+- [x] 8.2 `POST /pacientes` → 201 + `Location`; `PUT /pacientes/{id}` → 200; `DELETE /pacientes/{id}` → 204 / 409.
+- [x] 8.3 `GET /profesionales` y `GET /profesionales/{id}`: lectura para cualquier autenticado; escritura solo Admin.
+- [x] 8.4 `POST/PUT/DELETE /profesionales` (Admin) → 201/200/204, 409 en baja con turnos activos.
 
 ## 9. Api — endpoints Turnos
 
-- [ ] 9.1 `GET /turnos` con filtros + paginación; Admin ve todos, Profesional forzado a los suyos (ignora `?profesionalId`).
-- [ ] 9.2 `GET /turnos/{id}` → 404 si no existe o no es del Profesional.
-- [ ] 9.3 `POST /turnos` (Admin) → 201 + `Location`; 404 paciente/profesional inexistente; 409 slot ocupado.
-- [ ] 9.4 `PUT /turnos/{id}` (Admin) → 200; revalida slot; 409 en colisión.
-- [ ] 9.5 `PATCH /turnos/{id}/estado`: Admin cualquier transición legal, Profesional solo las suyas; 409 transición ilegal, 404 turno ajeno.
+El alcance por rol, la máquina de estados y el anti doble-turno ya están en
+`TurnoService` (vía `ICurrentUser`, §5.D) — el controlador no repite esa lógica,
+solo cablea rutas/roles. `[Authorize]` de clase (cualquier autenticado puede leer
+y hacer `PATCH estado`); `[Authorize(Roles=Admin)]` puntual en `Crear`/`Editar`.
+Filtros (`desde/hasta/estado/pacienteId/profesionalId`) y `page`/`pageSize` se
+bindean como primitivos sueltos, no como `TurnoFiltro`/`PageRequest` directo
+(mismo motivo que §8: evitar la ambigüedad del model binder con tipos complejos).
+
+- [x] 9.1 `GET /turnos` con filtros + paginación; Admin ve todos, Profesional forzado a los suyos (ignora `?profesionalId`).
+- [x] 9.2 `GET /turnos/{id}` → 404 si no existe o no es del Profesional.
+- [x] 9.3 `POST /turnos` (Admin) → 201 + `Location`; 404 paciente/profesional inexistente; 409 slot ocupado.
+- [x] 9.4 `PUT /turnos/{id}` (Admin) → 200; revalida slot; 409 en colisión.
+- [x] 9.5 `PATCH /turnos/{id}/estado`: Admin cualquier transición legal, Profesional solo las suyas; 409 transición ilegal, 404 turno ajeno.
 
 ## 10. Tests
 
-- [ ] 10.1 Setup de tests de integración: `WebApplicationFactory` + SQLite en archivo temporal + seed controlado + helper de login por rol.
-- [ ] 10.2 Anti doble-turno: dos `POST` mismo `(profesional, inicio)` → segundo 409; cancelar el primero y re-crear → 201.
-- [ ] 10.3 Transiciones de estado: matriz legal/ilegal por rol vía `PATCH` (200 vs 409).
-- [ ] 10.4 Autorización: Profesional contra endpoints solo-Admin → 403; Profesional accediendo turno ajeno → 404.
-- [ ] 10.5 Auth: login OK / credenciales malas 401; refresh rota la cookie e invalida la anterior; logout revoca.
-- [ ] 10.6 Soft delete: baja de paciente/profesional con turno activo → 409; sin turnos → 204 y desaparece del listado.
-- [ ] 10.7 Validación: `inicio` en el pasado → 400 con `errors`; body incompleto → 400.
+Todo bajo `tests/Api.Tests/`, contra la Api real (`WebApplicationFactory<Program>`),
+no contra los servicios con fakes (eso ya está en §5.F). Una sola colección xUnit
+para **todas** las clases de este archivo (`[CollectionDefinition("Api")]` +
+`ICollectionFixture<IntegrationTestFactory>`, `[Collection("Api")]` en cada clase):
+un solo SQLite temporal sembrado, compartido — evita que dos factories corran en
+paralelo pisándose las env vars (ver 10.1) y evita rehacer la migración+seed por
+clase. Cada test crea sus propios pacientes/profesionales/turnos con datos propios
+en vez de asumir los IDs exactos del seed, para no acoplarse entre clases que
+comparten la misma base.
+
+Dos bugs reales encontrados (y corregidos) al escribir estos tests, no solo casos
+a probar:
+
+- **`ValidationFilter` (§6.7) no miraba `ModelState`, solo FluentValidation.**
+  Un valor de enum que no matchea ningún nombre (`{"estado":"NoExiste"}`) hace
+  fallar el *binding* del body; con `SuppressModelStateInvalidFilter = true` eso
+  no generaba 400 solo, dejaba `request` en `null` y el action reventaba con
+  `NullReferenceException` → 500. Fix: `ValidationFilter` ahora también vuelca
+  `context.ModelState` a la misma `ValidationException` antes de correr
+  FluentValidation.
+- **El cliente HTTP de los tests necesita las mismas opciones JSON que el
+  servidor.** `AddApi` (§6.2) serializa los enums (`Rol`, `EstadoTurno`) como
+  string; `System.Net.Http.Json` del lado del test usa enums numéricos por
+  default si no se le pasan las mismas opciones — sin esto, deserializar
+  cualquier DTO con un enum revienta con `JsonException`. Fix: `ApiJson.Options`
+  compartido, pasado a todo `*AsJsonAsync`/`ReadFromJsonAsync`/`GetFromJsonAsync`.
+
+- [x] 10.1 `IntegrationTestFactory : WebApplicationFactory<Program>` (+ `LoginHelper`, `ApiJson`):
+  - SQLite en archivo temporal (mismo patrón que `Infrastructure.Tests/SqliteDatabaseFixture`: `Path.GetTempPath()` + GUID), borrado en `Dispose`. `Program.cs` ya llama `MigrateAndSeedAsync()` al bootear (§6.1), no hace falta invocarlo aparte.
+  - **Gotcha real de `AddApi`/`AddInfrastructure` (§6):** leen `IConfiguration` de forma *eager* al registrar servicios (`configuration["Jwt:Secret"]`, `GetConnectionString("Default")`), no de forma diferida vía `IOptions<T>`. Por eso `ConfigureWebHost(b => b.ConfigureAppConfiguration(...))` de `WebApplicationFactory` **no** alcanza a pisar esos valores — llega después de que `Program.cs` ya los leyó. Fix: setear `Environment.SetEnvironmentVariable(...)` (`ConnectionStrings__Default`, `Jwt__Secret`, `Jwt__Issuer`, `Jwt__Audience`, `Seed__AdminPassword`, `Seed__ProfessionalPassword`) en el **constructor** del factory, antes de que algo toque `Services`/`CreateClient()` (recién ahí arranca `Program.cs`). Mismo truco que ya usé a mano en los smoke tests de §6-§9.
+  - `LoginHelper.AsAdminAsync(HttpClient)` / `AsProfesionalAsync(HttpClient)`: hacen `POST /api/auth/login` con las passwords fijas de arriba, devuelven el token para `Authorization: Bearer` y el valor crudo de la cookie `rt` (el `HttpClient` de test no es un browser: no persiste `Set-Cookie` solo, hay que leerlo y re-mandarlo a mano como header `Cookie`, igual que con `-c/-b` en curl).
+- [x] 10.2 `AntiDobleTurnoTests`: crea profesional+pacientes propios; dos `POST /turnos` al mismo `(profesionalId, inicio)` → 1º 201, 2º 409; `PATCH estado=Cancelado` sobre el primero y `POST` de nuevo al mismo slot → 201.
+- [x] 10.3 `TransicionesEstadoTests`: las 4 flechas legales + 4 casos ilegales representativos (salto de paso, no-op, reabrir cada terminal) vía `[Theory]`/`[MemberData]`, una vez como Admin y otra como Profesional dueño del turno.
+- [x] 10.4 `AutorizacionTests`: Profesional contra `POST/PUT/DELETE /pacientes`, `POST/PUT/DELETE /profesionales`, `POST/PUT /turnos` → 403; Profesional contra `GET /turnos/{id}` y `PATCH .../estado` de un turno ajeno → 404; sin `Authorization` a `/pacientes`, `/profesionales`, `/turnos`, `/auth/me` → 401.
+- [x] 10.5 `AuthTests`: login OK (200 + token + cookie con los atributos de §7: `httponly`/`secure`/`samesite=none`/`path=/api/auth`) / credenciales malas → 401; `refresh` rota la cookie y reusar la vieja da 401 (revoke-on-use); `logout` revoca y esa cookie ya no sirve para refrescar; `me` sin token → 401.
+- [x] 10.6 `SoftDeleteTests`: paciente/profesional con turno `Pendiente`/`Confirmado` → `DELETE` 409; sin turnos activos → 204, y ya no aparece en `GET /{id}` (404).
+- [x] 10.7 `ValidacionTests`: `POST /turnos` con `inicio` pasado → 400 con `errors.Inicio`; `POST /pacientes`/`POST /profesionales` con campos vacíos → 400 con `errors` por campo; `PATCH estado` con valor fuera del enum → 400 (y el turno no cambia de estado) — regresión del bug de `ModelState` de arriba.
 
 ## 11. Deploy y CI
 
