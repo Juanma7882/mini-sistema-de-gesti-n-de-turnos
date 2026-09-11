@@ -202,14 +202,28 @@ a probar:
 
 ## 11. Deploy y CI
 
-- [ ] 11.1 `Dockerfile` multi-stage (build .NET 9 → runtime); `EXPOSE`, `ASPNETCORE_URLS`.
-- [ ] 11.2 En arranque: `db.Database.Migrate()` + seed; `ConnectionStrings__Default` apuntando al volume de Railway (`Data Source=./data/turnos.db`).
-- [ ] 11.3 Configurar servicio en Railway: variables (`Jwt__*`, `Cors__AllowedOrigins`, `Seed__*`), volume montado en `./data`.
-- [ ] 11.4 GitHub Actions: workflow `build + test` en push/PR (`dotnet restore/build/test`).
-- [ ] 11.5 Smoke post-deploy: `login` → `me` → crear paciente → crear turno → cambiar estado contra la URL de Railway.
+`Dockerfile` y `.dockerignore` en la **raíz del repo** (no en `backend/`), como
+ya documenta la estructura del README — el contexto de build necesita ver
+`backend/` entero pero nada de `frontend/` (Vercel lo despliega aparte, con su
+propio build). 11.1 y 11.4 son archivos que se arman acá sin depender de nada
+externo; 11.3 y 11.5 necesitan la cuenta de Railway — quedan documentados como
+runbook, no como código.
+
+- [x] 11.1 `Dockerfile` multi-stage:
+  - Etapa `build` (`mcr.microsoft.com/dotnet/sdk:9.0`): copia primero los `.csproj` de las 4 capas + `Turnos.sln`, `dotnet restore` (cachea la capa de paquetes mientras no cambien las dependencias), después copia `backend/src` y `dotnet publish src/Api/Turnos.Api.csproj -c Release -o /app`.
+  - Etapa `runtime` (`mcr.microsoft.com/dotnet/aspnet:9.0`, no el SDK completo): copia `/app` del build, `EXPOSE 8080`, `ENTRYPOINT` que arranca con `--urls http://+:${PORT:-8080}` — Railway inyecta `PORT` dinámicamente; con el fallback a 8080 el mismo Dockerfile también sirve para probarlo local con `docker run`.
+  - `.dockerignore` en la raíz: `**/bin/`, `**/obj/`, `frontend/`, `.git/`, `*.db`, `openspec/` — si no, el build manda `frontend/node_modules` entero como contexto.
+  - Verificado sin Docker corriendo en la máquina (el daemon estaba caído): `dotnet publish backend/src/Api/Turnos.Api.csproj -c Release -o <dir>` (el mismo comando de la etapa `build`) y después `dotnet Turnos.Api.dll --urls http://+:${PORT:-8080}` (el mismo `ENTRYPOINT`) contra `/health`, con `PORT` seteado (Railway) y sin setear (fallback 8080) — los dos casos responden 200.
+- [x] 11.2 Ya resuelto por §6.1 (`Program.cs` llama `MigrateAndSeedAsync()` al arrancar, en cualquier entorno) — no hace falta código nuevo. Lo único que falta es la variable `ConnectionStrings__Default=Data Source=./data/turnos.db` en Railway (§11.3): la ruta es relativa al `WORKDIR /app` del Dockerfile, así que el volume tiene que montarse en `/app/data` para que coincida.
+- [ ] 11.3 Runbook Railway (manual, pendiente — necesita la cuenta):
+  1. Servicio nuevo desde el repo de GitHub, build por Dockerfile (detecta el de la raíz solo).
+  2. Variables: `ConnectionStrings__Default=Data Source=./data/turnos.db`, `Jwt__Secret` (random ≥32 chars — generar aparte, no reusar el de dev), `Jwt__Issuer`/`Jwt__Audience` (opcional, ya traen default), `Cors__AllowedOrigins=<url de Vercel>`, `Seed__AdminPassword`, `Seed__ProfessionalPassword`, **`ASPNETCORE_ENVIRONMENT=Development`** — decidido a propósito (no el default `Production`): es una entrega con deadline, se prioriza que el evaluador pueda probar los endpoints desde Swagger en la URL pública antes que el prolijismo de un prod real.
+  3. Volume montado en `/app/data`.
+- [x] 11.4 `.github/workflows/backend-ci.yml`: `actions/checkout` + `actions/setup-dotnet@v4` (9.0.x) + `dotnet restore/build/test` sobre `backend/Turnos.sln`. Filtrado por `paths: backend/**` para no correr en commits que solo tocan `frontend/`. Sin secrets: `IntegrationTestFactory` (§10.1) ya setea sus propias env vars de proceso (`Jwt__Secret` de test, etc.), así que `Api.Tests` corre igual en el runner sin configurar nada en GitHub.
+- [x] 11.5 `scripts/smoke.sh`, parametrizado por `BASE_URL`/`ADMIN_PASSWORD`: `login` (admin) → `me` → crear paciente → crear profesional → crear turno → `PATCH estado`; cada paso corta con el código de salida si el status no es el esperado (`curl -f`). Se corre a mano una vez desplegado — no es parte del workflow de CI, no hay URL de Railway hasta que el servicio exista (§11.3).
 
 ## 12. Documentación
 
-- [ ] 12.1 Completar en `README.md` las secciones ⚠️: "Cómo correr localmente", "Validaciones principales", "Estructura del proyecto".
-- [ ] 12.2 `docs/decisiones-tecnicas.md` y `docs/mejoras-futuras.md`.
-- [ ] 12.3 `PROMPTS.md` / `docs/uso-de-ia.md`: prompts principales, qué se revisó y corrigió.
+- [x] 12.1 Completar en `README.md` las secciones ⚠️: "Cómo correr localmente" (instrucciones reales, `dotnet user-secrets` para `Jwt:Secret`), "Validaciones principales" (cada regla FluentValidation + los dos índices únicos parciales), "Estructura del proyecto" (agrega `docs/`, `scripts/`, `.dockerignore`). De paso: tabla de `POST /profesionales` actualizada con `email`/`password` (crea el `Usuario` junto con el `Profesional`, §12 encontró este cambio ya hecho sin commitear al arrancar la sesión — verificado que compila y sus tests pasan antes de documentarlo).
+- [x] 12.2 [`docs/decisiones-tecnicas.md`](docs/decisiones-tecnicas.md) y [`docs/mejoras-futuras.md`](docs/mejoras-futuras.md).
+- [x] 12.3 [`docs/uso-de-ia.md`](docs/uso-de-ia.md): herramienta, ritmo de trabajo, prompts principales, bugs reales encontrados y corregidos (no solo casos de test imaginados), supervisión humana en las decisiones con más de una opción razonable.

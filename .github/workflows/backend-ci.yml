@@ -1,0 +1,37 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Restore
+        run: dotnet restore backend/Turnos.sln
+
+      - name: Build
+        run: dotnet build backend/Turnos.sln --no-restore -c Release
+
+      # Api.Tests arranca la Api real contra un SQLite temporal (§10.1): el
+      # propio IntegrationTestFactory setea Jwt__Secret y el resto de las env
+      # vars que necesita en su constructor, así que no hace falta ningún
+      # secret configurado en el repo para que esto corra en el runner.
+      - name: Test
+        run: dotnet test backend/Turnos.sln --no-build -c Release --verbosity normal

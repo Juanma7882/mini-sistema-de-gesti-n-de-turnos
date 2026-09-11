@@ -1,0 +1,16 @@
+# Todo lo que el build de Docker (Dockerfile en la raíz) no necesita ver.
+
+**/bin/
+**/obj/
+**/.vs/
+**/*.user
+
+frontend/
+openspec/
+
+.git/
+.github/
+
+*.db
+*.db-shm
+*.db-wal
