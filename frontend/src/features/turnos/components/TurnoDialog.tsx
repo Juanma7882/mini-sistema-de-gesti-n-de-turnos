@@ -86,9 +86,9 @@ export function TurnoDialog({ open, turno, onClose, onSaved }: TurnoDialogProps)
   }, [open])
 
   useEffect(() => {
-    if (!open || !debouncedPacienteSearch) return
+    if (!open) return
     pacientesApi
-      .listar({ search: debouncedPacienteSearch, pageSize: 10 })
+      .listar({ search: debouncedPacienteSearch || undefined, pageSize: 10 })
       .then((page) => setPacienteOptions(page.items))
   }, [open, debouncedPacienteSearch])
 
@@ -158,6 +158,10 @@ export function TurnoDialog({ open, turno, onClose, onSaved }: TurnoDialogProps)
           <select
             className="mt-2 w-full rounded-[10px] border border-border px-3 py-2 text-sm outline-none"
             value={pacienteId ?? ''}
+            /* Con búsqueda activa y sin selección todavía, se agranda a
+               listbox (options visibles sin clickear) para que el resultado
+               de tipear se vea al toque; si no, es un <select> normal. */
+            size={pacienteSearch && !pacienteId ? Math.min(Math.max(pacienteOptions.length, 1), 6) : 1}
             {...register('pacienteId')}
           >
             <option value="">Elegí un paciente…</option>
@@ -167,6 +171,9 @@ export function TurnoDialog({ open, turno, onClose, onSaved }: TurnoDialogProps)
               </option>
             ))}
           </select>
+          {pacienteSearch && !pacienteId && pacienteOptions.length === 0 && (
+            <p className="mt-1 text-sm text-muted-foreground">Sin resultados para "{pacienteSearch}".</p>
+          )}
           <FieldError message={errors.pacienteId?.message} />
         </div>
 
