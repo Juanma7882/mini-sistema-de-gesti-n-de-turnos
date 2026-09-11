@@ -13,7 +13,13 @@ import { EstadoBadge } from './EstadoBadge'
 import { EstadoControl } from './EstadoControl'
 
 /** Refleja `?turno=<id>` en la URL: recargable, cerrable con Escape o click afuera. */
-export function TurnoDetailDrawer({ onEdit }: { onEdit: (turno: TurnoDto) => void }) {
+export function TurnoDetailDrawer({
+  onEdit,
+  onEstadoChanged,
+}: {
+  onEdit: (turno: TurnoDto) => void
+  onEstadoChanged?: () => void
+}) {
   const [searchParams, setSearchParams] = useSearchParams()
   const turnoId = searchParams.get('turno')
   const { user } = useAuth()
@@ -65,6 +71,7 @@ export function TurnoDetailDrawer({ onEdit }: { onEdit: (turno: TurnoDto) => voi
       const updated = await turnosApi.cambiarEstado(turno.id, siguiente)
       setTurno(updated)
       toast.success(siguiente === 'Cancelado' ? 'Turno cancelado' : 'Estado actualizado')
+      onEstadoChanged?.()
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         setEstadoError(err.problem.detail)

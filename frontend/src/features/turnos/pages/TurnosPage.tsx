@@ -183,6 +183,7 @@ export function TurnosPage() {
           setEditingTurno(turno)
           setDialogOpen(true)
         }}
+        onEstadoChanged={() => void refetch()}
       />
 
       <TurnoDialog
