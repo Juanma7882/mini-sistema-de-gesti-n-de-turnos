@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { AlertCircle, Loader2 } from 'lucide-react'
 import { Dialog } from '../../../shared/components/Dialog'
 import { FieldError } from '../../../shared/components/FieldError'
 import { useProblemForm } from '../../../shared/hooks/useProblemForm'
 import { profesionalesApi } from '../api/profesionalesApi'
-import { profesionalSchema, type ProfesionalFormValues } from '../schemas/profesionalSchema'
+import {
+  crearProfesionalSchema,
+  profesionalSchema,
+  type ProfesionalFormValues,
+} from '../schemas/profesionalSchema'
 import type { ProfesionalDto } from '../types'
 
 interface ProfesionalDialogProps {
@@ -17,17 +21,23 @@ interface ProfesionalDialogProps {
   onSaved: () => void
 }
 
-const EMPTY: ProfesionalFormValues = { nombre: '', apellido: '', especialidad: '' }
+const EMPTY: ProfesionalFormValues = { nombre: '', apellido: '', especialidad: '', email: '', password: '' }
 
 export function ProfesionalDialog({ open, profesional, onClose, onSaved }: ProfesionalDialogProps) {
   const [formError, setFormError] = useState<string | null>(null)
+  const esAlta = profesional === null
   const {
     register,
     handleSubmit,
     reset,
     setError,
     formState: { errors, isSubmitting },
-  } = useForm<ProfesionalFormValues>({ resolver: zodResolver(profesionalSchema), defaultValues: EMPTY })
+  } = useForm<ProfesionalFormValues>({
+    resolver: zodResolver(
+      esAlta ? crearProfesionalSchema : profesionalSchema,
+    ) as unknown as Resolver<ProfesionalFormValues>,
+    defaultValues: EMPTY,
+  })
 
   const applyProblem = useProblemForm<ProfesionalFormValues>(setError)
 
@@ -36,7 +46,7 @@ export function ProfesionalDialog({ open, profesional, onClose, onSaved }: Profe
       setFormError(null)
       reset(
         profesional
-          ? { nombre: profesional.nombre, apellido: profesional.apellido, especialidad: profesional.especialidad }
+          ? { ...EMPTY, nombre: profesional.nombre, apellido: profesional.apellido, especialidad: profesional.especialidad }
           : EMPTY,
       )
     }
@@ -46,7 +56,11 @@ export function ProfesionalDialog({ open, profesional, onClose, onSaved }: Profe
     setFormError(null)
     try {
       if (profesional) {
-        await profesionalesApi.editar(profesional.id, values)
+        await profesionalesApi.editar(profesional.id, {
+          nombre: values.nombre,
+          apellido: values.apellido,
+          especialidad: values.especialidad,
+        })
       } else {
         await profesionalesApi.crear(values)
       }
@@ -105,6 +119,36 @@ export function ProfesionalDialog({ open, profesional, onClose, onSaved }: Profe
           />
           <FieldError message={errors.especialidad?.message} />
         </div>
+
+        {esAlta && (
+          <>
+            <div>
+              <label className="text-sm font-medium" htmlFor="email">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                className="mt-1 w-full rounded-[10px] border border-border px-3 py-2 text-sm outline-none"
+                {...register('email')}
+              />
+              <FieldError message={errors.email?.message} />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium" htmlFor="password">
+                Contraseña
+              </label>
+              <input
+                id="password"
+                type="password"
+                className="mt-1 w-full rounded-[10px] border border-border px-3 py-2 text-sm outline-none"
+                {...register('password')}
+              />
+              <FieldError message={errors.password?.message} />
+            </div>
+          </>
+        )}
 
         <div className="flex justify-end gap-2 pt-2">
           <button

@@ -6,4 +6,11 @@ export const profesionalSchema = z.object({
   especialidad: z.string().min(1, 'Requerido.'),
 })
 
-export type ProfesionalFormValues = z.infer<typeof profesionalSchema>
+/** Alta: crea el profesional junto con su usuario, por eso pide también las
+ * credenciales de acceso. */
+export const crearProfesionalSchema = profesionalSchema.extend({
+  email: z.string().min(1, 'Requerido.').email('Email inválido.'),
+  password: z.string().min(8, 'Mínimo 8 caracteres.'),
+})
+
+export type ProfesionalFormValues = z.infer<typeof crearProfesionalSchema>
