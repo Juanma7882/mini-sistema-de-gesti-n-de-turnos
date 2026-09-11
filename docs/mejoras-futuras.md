@@ -11,19 +11,25 @@ Cosas identificadas pero deliberadamente fuera del alcance de esta entrega
   que el legítimo ya está revocado. Una mejora real sería, al detectar el uso
   de un token ya revocado, revocar en cascada toda la cadena de ese usuario y
   forzar re-login.
-- **Rate limiting / lockout en `/auth/login`.** No hay límite de intentos por
-  IP o por cuenta; un ataque de fuerza bruta contra BCrypt es lento pero no
-  está mitigado explícitamente.
+- **Lockout por cuenta en `/auth/login`.** Ya hay rate limit por IP (5 intentos
+  cada 60s, ver README y `decisiones-tecnicas.md`), pero no hay límite por
+  cuenta — un ataque distribuido desde muchas IPs contra un mismo email no
+  queda cubierto por la ventana fija actual.
 - **Rol como enum cerrado (`Admin`/`Profesional`).** El modelo ya soporta un
   tercer rol sin cambios de schema (un `Usuario` puede no tener `Profesional`,
   como ya pasa con Admin), pero agregar `Supervisor`/`Dueño` real implica
   definir sus permisos — no se hizo porque no lo pedía el contrato.
 ## Datos y modelado
 
-- **`Especialidad` (Profesional) y `ObraSocial` (Paciente) como texto libre.**
-  No hay catálogo/tabla propia — dos admins pueden escribir "Cardiología" y
-  "cardiologia" como valores distintos. Normalizar a una tabla con FK
-  resolvería duplicados y typos, a costa de un CRUD extra.
+- **`Especialidad` (Profesional) y `ObraSocial` (Paciente) siguen siendo texto
+  libre, sin catálogo propio.** Ya se normaliza la entrada (`TextoNormalizer.
+  TextoLibre`, ver `decisiones-tecnicas.md`): recorta espacios y capitaliza
+  cada palabra salvo siglas cortas en mayúsculas (`OSDE`, `PAMI`), así que
+  "cardiologia" y "CARDIOLOGIA" ya caen en el mismo valor. Lo que la
+  normalización **no** resuelve son variantes de ortografía real —
+  "Cardiología" (con tilde) y "Cardiologia" (sin tilde) siguen siendo valores
+  distintos. Eliminar eso del todo requiere una tabla catálogo con FK, a costa
+  de un CRUD extra.
 - **Revertir un turno terminal.** `Cancelado`/`Atendido` son terminales para
   todos los roles sin excepción. Un caso real ("me equivoqué, lo cancelé mal")
   necesitaría una transición explícita con auditoría (quién, cuándo, por qué)
@@ -31,6 +37,20 @@ Cosas identificadas pero deliberadamente fuera del alcance de esta entrega
 - **Paginación offset (`page`/`pageSize`), no cursor-based.** Para el volumen
   de datos de esta clínica de demo es irrelevante; con miles de turnos, un
   cursor evitaría el costo de `OFFSET` creciente en SQLite.
+
+## Frontend
+
+- **`shared/components/ui/` vacía.** Quedó del plan original de inicializar
+  `shadcn/ui` (`frontend.md §1.3`), que se descartó a favor de componentes
+  propios sobre Tailwind directo (ver `arquitectura-frontend.md` §3.7). Nada
+  la importa — limpieza de bajo esfuerzo, solo falta borrarla.
+- **Sin librería de data-fetching (TanStack Query).** Cada feature maneja su
+  propio estado de listado/mutación sobre `httpClient` (`usePagedResource` +
+  hooks `use<X>Query`). Funciona para el volumen de esta demo; con más
+  pantallas compartiendo los mismos datos, una cache compartida evitaría
+  refetches duplicados.
+- **Prompts de IA del frontend sin volcar a `docs/uso-de-ia.md`.** Ese
+  documento hoy solo cubre el backend (`frontend.md §11.2`).
 
 ## Infraestructura y operación
 

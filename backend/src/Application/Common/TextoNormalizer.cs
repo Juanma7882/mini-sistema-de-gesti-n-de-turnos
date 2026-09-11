@@ -45,4 +45,40 @@ public static class TextoNormalizer
 
         return new string(chars);
     }
+
+    /// <summary>
+    /// Normaliza texto libre de catálogo abierto (especialidad, obra social):
+    /// recorta, colapsa espacios y capitaliza cada palabra
+    /// (<c>"cardiologia"</c> → <c>"Cardiologia"</c>, <c>"swiss medical"</c> →
+    /// <c>"Swiss Medical"</c>) — salvo que la palabra sea corta (2-5 letras) y
+    /// venga completamente en mayúsculas, en cuyo caso se respeta tal cual por
+    /// ser probablemente una sigla real (<c>"OSDE"</c>, <c>"PAMI"</c>,
+    /// <c>"IOMA"</c>); una palabra larga en mayúsculas (<c>"CARDIOLOGIA"</c>) sí
+    /// se capitaliza, porque es más probable que sea un descuido de mayúsculas
+    /// que una sigla. Reduce duplicados por variación de mayúsculas/minúsculas,
+    /// pero no corrige ortografía ni tildes: sin un catálogo con FK (ver
+    /// <c>mejoras-futuras.md</c>), dos formas distintas de escribir lo mismo
+    /// pueden seguir generando valores diferentes.
+    /// </summary>
+    public static string TextoLibre(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var palabras = value.Split(
+            ' ',
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        for (var i = 0; i < palabras.Length; i++)
+        {
+            palabras[i] = EsProbablementeSigla(palabras[i]) ? palabras[i] : Capitalizar(palabras[i]);
+        }
+
+        return string.Join(' ', palabras);
+    }
+
+    private static bool EsProbablementeSigla(string palabra) =>
+        palabra.Length is > 1 and <= 5 && palabra.All(c => !char.IsLetter(c) || char.IsUpper(c));
 }

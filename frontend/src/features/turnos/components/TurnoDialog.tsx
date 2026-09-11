@@ -33,6 +33,20 @@ function splitInicio(inicio: string): { fecha: string; hora: string } {
   return { fecha, hora: horaCompleta.slice(0, 5) }
 }
 
+/** Fecha de hoy en horario local como YYYY-MM-DD, para el `min` del input de fecha. */
+function hoyLocal(): string {
+  const d = new Date()
+  const mes = String(d.getMonth() + 1).padStart(2, '0')
+  const dia = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${mes}-${dia}`
+}
+
+/** Hora actual local como HH:MM, para el `min` del input de hora cuando la fecha es hoy. */
+function horaActualLocal(): string {
+  const d = new Date()
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
 export function TurnoDialog({ open, turno, onClose, onSaved }: TurnoDialogProps) {
   const [formError, setFormError] = useState<{ message: string; icon: LucideIcon } | null>(null)
   const [fecha, setFecha] = useState('')
@@ -41,6 +55,7 @@ export function TurnoDialog({ open, turno, onClose, onSaved }: TurnoDialogProps)
   const [pacienteSearch, setPacienteSearch] = useState('')
   const debouncedPacienteSearch = useDebouncedValue(pacienteSearch)
   const [pacienteOptions, setPacienteOptions] = useState<PacienteOption[]>([])
+  const [pacienteDropdownOpen, setPacienteDropdownOpen] = useState(false)
   const [profesionalOptions, setProfesionalOptions] = useState<ProfesionalDto[]>([])
 
   const {
@@ -149,31 +164,53 @@ export function TurnoDialog({ open, turno, onClose, onSaved }: TurnoDialogProps)
             />
             <input
               id="pacienteSearch"
+              role="combobox"
+              aria-expanded={pacienteDropdownOpen}
+              aria-controls="pacienteOptions"
+              autoComplete="off"
               value={pacienteSearch}
-              onChange={(e) => setPacienteSearch(e.target.value)}
+              onChange={(e) => {
+                setPacienteSearch(e.target.value)
+                setValue('pacienteId', '', { shouldValidate: false })
+                setPacienteDropdownOpen(true)
+              }}
+              onFocus={() => setPacienteDropdownOpen(true)}
+              /* El timeout deja que el click en una opción (onMouseDown) se
+                 procese antes de que el blur cierre la lista. */
+              onBlur={() => setTimeout(() => setPacienteDropdownOpen(false), 150)}
               placeholder="Buscar paciente…"
               className="w-full rounded-[10px] border border-border py-2 pl-9 pr-3 text-sm outline-none"
             />
+            {pacienteDropdownOpen && (
+              <ul
+                id="pacienteOptions"
+                role="listbox"
+                className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-[10px] border border-border bg-background shadow-md"
+              >
+                {pacienteOptions.length === 0 && (
+                  <li className="px-3 py-2 text-sm text-muted-foreground">
+                    Sin resultados{pacienteSearch ? ` para "${pacienteSearch}"` : ''}.
+                  </li>
+                )}
+                {pacienteOptions.map((p) => (
+                  <li
+                    key={p.id}
+                    role="option"
+                    aria-selected={p.id === pacienteId}
+                    onMouseDown={(e) => {
+                      e.preventDefault()
+                      setValue('pacienteId', p.id, { shouldValidate: true })
+                      setPacienteSearch(`${p.nombre} ${p.apellido}`)
+                      setPacienteDropdownOpen(false)
+                    }}
+                    className="cursor-pointer px-3 py-2 text-sm hover:bg-primary-tint"
+                  >
+                    {p.nombre} {p.apellido}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
-          <select
-            className="mt-2 w-full rounded-[10px] border border-border px-3 py-2 text-sm outline-none"
-            value={pacienteId ?? ''}
-            /* Con búsqueda activa y sin selección todavía, se agranda a
-               listbox (options visibles sin clickear) para que el resultado
-               de tipear se vea al toque; si no, es un <select> normal. */
-            size={pacienteSearch && !pacienteId ? Math.min(Math.max(pacienteOptions.length, 1), 6) : 1}
-            {...register('pacienteId')}
-          >
-            <option value="">Elegí un paciente…</option>
-            {pacienteOptions.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nombre} {p.apellido}
-              </option>
-            ))}
-          </select>
-          {pacienteSearch && !pacienteId && pacienteOptions.length === 0 && (
-            <p className="mt-1 text-sm text-muted-foreground">Sin resultados para "{pacienteSearch}".</p>
-          )}
           <FieldError message={errors.pacienteId?.message} />
         </div>
 
@@ -204,8 +241,12 @@ export function TurnoDialog({ open, turno, onClose, onSaved }: TurnoDialogProps)
             <input
               id="fecha"
               type="date"
+              min={hoyLocal()}
               value={fecha}
-              onChange={(e) => setFecha(e.target.value)}
+              onChange={(e) => {
+                if (e.target.value && e.target.value < hoyLocal()) return
+                setFecha(e.target.value)
+              }}
               className="mt-1 w-full rounded-[10px] border border-border px-3 py-2 text-sm outline-none"
             />
           </div>
@@ -216,8 +257,12 @@ export function TurnoDialog({ open, turno, onClose, onSaved }: TurnoDialogProps)
             <input
               id="hora"
               type="time"
+              min={fecha === hoyLocal() ? horaActualLocal() : undefined}
               value={hora}
-              onChange={(e) => setHora(e.target.value)}
+              onChange={(e) => {
+                if (e.target.value && fecha === hoyLocal() && e.target.value < horaActualLocal()) return
+                setHora(e.target.value)
+              }}
               className="mt-1 w-full rounded-[10px] border border-border px-3 py-2 text-sm outline-none"
             />
           </div>

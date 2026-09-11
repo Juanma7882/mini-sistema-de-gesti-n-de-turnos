@@ -51,6 +51,15 @@ inherentemente cross-site, así que hay que correr hasta el entorno de
 desarrollo por https si se la quiere probar tal cual se comporta en producción
 (perfil `https` de `launchSettings.json`).
 
+**Rate limit fijo por IP en `POST /auth/login`, no lockout por cuenta.**
+`AddRateLimiter` con `FixedWindowLimiter` (5 intentos / 60s, partición por
+`RemoteIpAddress`), `RejectionStatusCode = 429` con el mismo formato
+`ProblemDetails` que el resto de los errores (el rechazo del rate limiter no
+pasa por `ExceptionHandler`, así que hay que armar el `ProblemDetails` a mano
+en `OnRejected`). Frena fuerza bruta simple sin tocar la lógica de `AuthService`
+ni requerir una tabla de intentos fallidos; un lockout por cuenta (más robusto
+contra ataques distribuidos) queda en `docs/mejoras-futuras.md`.
+
 **Profesional crea su propio `Usuario`, atómico con `POST /profesionales`.**
 Un profesional nunca debería existir sin poder loguearse. `ProfesionalService.
 CrearAsync` arma las dos entidades y hace un solo `SaveChangesAsync` — EF Core
@@ -103,6 +112,22 @@ pre-chequeo evita el viaje redondo en el caso común, y un índice único parcia
 en SQLite (`WHERE Estado <> Cancelado` / `WHERE Estado < Cancelado`) corta la
 carrera real entre dos escrituras concurrentes — el repo traduce la
 `DbUpdateException` del índice a `ConflictException` (409), nunca un 500.
+
+## Datos
+
+**Normalización de texto libre en el servicio, no en el validador
+(`TextoNormalizer`, `Application/Common`).** `NombrePropio` (nombre/apellido)
+capitaliza cada palabra. `TextoLibre` (especialidad, obra social) hace lo mismo
+pero **preserva siglas cortas en mayúsculas** (2-5 letras: `OSDE`, `PAMI`,
+`IOMA`) sin capitalizarlas — una palabra larga toda en mayúsculas
+(`CARDIOLOGIA`) sí se corrige, porque es más probable que sea un descuido de
+teclado que una sigla real. Vive en el servicio (no en el `*RequestValidator`
+de FluentValidation) porque normalizar no es validar: el dato sigue siendo
+válido tal como llegó, solo se lo reescribe antes de persistir para reducir
+duplicados por variación de mayúsculas/minúsculas. No resuelve variantes de
+ortografía real (`"Cardiología"` con tilde vs. `"Cardiologia"` sin tilde
+siguen siendo valores distintos) — eso requeriría un catálogo con FK, ver
+`mejoras-futuras.md`.
 
 ## Testing
 

@@ -21,7 +21,7 @@ const LINKS: NavItem[] = [
 function Brand() {
   return (
     <div className="flex items-center gap-2 px-2">
-      <span className="grid size-9 place-items-center rounded-[10px] bg-primary-tint text-primary">
+      <span className="grid size-9 place-items-center rounded-full bg-primary-tint text-primary">
         <HeartPulse size={18} aria-hidden="true" />
       </span>
       <span className="text-sm font-semibold text-foreground">MAE Turnos</span>

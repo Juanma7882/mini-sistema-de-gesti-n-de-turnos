@@ -4,8 +4,9 @@ Alcance: cómo se organiza el código del frontend y cómo se nombran las cosas.
 Complementa a `frontend.md` (lista de tareas). Cuando esta guía y `frontend.md`
 difieran en la estructura de carpetas, **manda esta guía** (`frontend.md §1.5`
 quedó desactualizado).
-Stack: React + TypeScript · Vite · React Router · Tailwind CSS + shadcn/ui ·
-zod · Vitest + Testing Library.
+Stack: React + TypeScript · Vite · React Router · Tailwind CSS v4 (componentes
+propios, **sin shadcn/ui** — ver §3.7) · lucide-react · sonner · react-hook-form
++ zod · SignalR (`@microsoft/signalr`) · Vitest + Testing Library.
 
 Fuente de verdad del **contrato** (rutas, status codes, DTOs, flujo de auth):
 `README.md`. Este documento no lo repite: fija la estructura interna que lo
@@ -27,7 +28,7 @@ app  ──▶  features/*  ──▶  shared  ──▶  core
 | Anillo | Responsabilidad | NO hace |
 |---|---|---|
 | **app** | Bootstrap: `main.tsx`, `App.tsx`, árbol de providers, definición de rutas (`router.tsx`). Compone todo; no tiene lógica de dominio. | Componentes de pantalla, llamadas a la API, reglas de negocio. |
-| **core** | Infraestructura transversal viva durante toda la sesión: cliente HTTP con interceptor 401, contexto y guards de auth, sincronización entre pestañas, layout raíz, lectura de `env`. | Conocer entidades del dominio (`Paciente`, `Turno`…). |
+| **core** | Infraestructura transversal viva durante toda la sesión: cliente HTTP con interceptor 401, contexto y guards de auth, sincronización entre pestañas, conexión SignalR (§1.1), layout raíz, lectura de `env`. | Conocer entidades del dominio (`Paciente`, `Turno`…). |
 | **shared** | Genérico y **sin dominio**, reutilizado por más de una feature: componentes de UI (`DataTable`, `ConfirmDialog`…), hooks (`useDebouncedValue`), helpers (`parseProblemDetails`, `formatInicio`), tipos compartidos (`PagedResult<T>`, `ProblemDetails`). | Importar de `features/` o de `app/`. Tener estado de negocio. |
 | **features/&lt;dominio&gt;** | Un dominio de negocio por carpeta (`auth`, `pacientes`, `profesionales`, `turnos`), cada uno autocontenido: `pages/`, `components/`, `api/`, `schemas/`, `hooks/`. | Importar de otra feature. Registrar sus propias rutas (lo hace `app/router.tsx`). |
 | **pages** | Páginas sin dominio propio (`NotFoundPage`, `ForbiddenPage`). | Lógica; son casi estáticas. |
@@ -41,6 +42,18 @@ tras una mutación) se maneja con hooks propios de la feature
 (`usePacientesQuery`, `useTurnoMutations`) construidos sobre `httpClient`
 — sin librería de data-fetching en esta entrega (ver §5.5).
 
+### 1.1 Tiempo real (SignalR)
+
+`core/realtime/turnosHub.ts` envuelve la conexión a `/hubs/turnos` (fuera de
+`/api`, a diferencia del `httpClient`). `AuthContext` maneja su ciclo de vida:
+`turnosHub.connect()` al autenticar (login o hidratación por refresh exitosa),
+`turnosHub.disconnect()` al hacer logout — así nunca queda una conexión abierta
+sin sesión. `TurnosPage` se suscribe con `turnosHub.subscribe(handler)` al
+evento `turnoCambiado` para refrescar el listado sin poll. Si la conexión
+falla, se ignora en silencio: no hay funcionalidad crítica que dependa de
+tiempo real, el usuario sigue viendo datos frescos al navegar. Detalle del lado
+servidor en [`arquitectura-backend.md` §1.1](arquitectura-backend.md#11-realtime-signalr).
+
 ---
 
 ## 2. Layout del proyecto
@@ -49,7 +62,6 @@ tras una mutación) se maneja con hooks propios de la feature
 frontend/                          ← junto a backend/
   index.html
   vite.config.ts                   ← plugins: react() + tailwindcss() (Tailwind v4, sin postcss.config)
-  components.json                  ← config del CLI de shadcn/ui (se crea al correr `shadcn init`)
   tsconfig.json / tsconfig.app.json / tsconfig.node.json   ← "strict": true, sin path aliases (ver §6)
   .env.example                     ← VITE_API_URL=
   eslint.config.js · .prettierrc
@@ -77,14 +89,18 @@ frontend/                          ← junto a backend/
         InitialsBadge.tsx
       config/
         env.ts                     ← lee y valida import.meta.env.VITE_API_URL
+      realtime/
+        turnosHub.ts               ← conexión SignalR a /hubs/turnos (ver §1.1)
     shared/
       components/
         DataTable.tsx              ← paginación + loading (skeleton) + estado vacío
         ConfirmDialog.tsx
+        Dialog.tsx                 ← modal propio (base de PacienteDialog, TurnoDialog…), sin shadcn/ui
         PageHeader.tsx
         FieldError.tsx
         EmptyState.tsx
-        ui/                        ← componentes generados por shadcn/ui (button, input, dialog, table…)
+        RouteFallback.tsx          ← fallback de <Suspense> para las rutas lazy (ver §3.6)
+        ui/                        ← vacía: placeholder de un `shadcn/ui` que no se llegó a inicializar (ver §3.7)
       hooks/
         useDebouncedValue.ts
         useProblemForm.ts          ← vuelca `errors` de ProblemDetails a los campos del form
@@ -164,7 +180,7 @@ forma dentro de cada feature.
 | Rol | Sufijo | Ejemplo |
 |---|---|---|
 | Pantalla enrutada | `Page` | `TurnosPage`, `LoginPage`, `NotFoundPage` |
-| Modal shadcn `Dialog` | `Dialog` | `PacienteDialog`, `ConfirmDialog` |
+| Modal (sobre `shared/components/Dialog.tsx` propio) | `Dialog` | `PacienteDialog`, `ConfirmDialog` |
 | Panel lateral | `Drawer` | `TurnoDetailDrawer` |
 | Proveedor de contexto | `Provider` | `AuthProvider` |
 | Componente de ruteo que protege | `Require*` | `RequireAuth`, `RequireRole` |
@@ -201,6 +217,12 @@ forma dentro de cada feature.
   (`?nuevo=1`, `?turno=<id>`) pero no crea segmentos de ruta.
 - La definición vive **entera** en `app/router.tsx`; las features no se
   autorregistran.
+- **Code-splitting por ruta** (`React.lazy` + `<Suspense fallback={<RouteFallback/>}>`):
+  `/login` y `/turnos` quedan estáticas (son la entrada y el home de cualquier
+  usuario logueado), el resto (`/pacientes`, `/profesionales`, `/403`, `*`) se
+  carga diferido para no sumarle al bundle inicial de un Profesional, que nunca
+  visita las pantallas solo-Admin. Detalle y alternativas en el change archivado
+  `openspec/changes/archive/2026-09-11-lazy-load-frontend-routes/`.
 
 ```
 /login                         público                → LoginPage
@@ -213,20 +235,29 @@ forma dentro de cada feature.
 *                              → NotFoundPage
 ```
 
-### 3.7 Tailwind y shadcn/ui
+### 3.7 Tailwind y componentes de UI
+
+> **`shadcn/ui` no se inicializó.** El plan original (`frontend.md §1.3`) era
+> generar los componentes de UI con el CLI de shadcn; en la práctica se
+> construyeron a mano en `shared/components/` (`Dialog`, `DataTable`,
+> `ConfirmDialog`, `PageHeader`, `FieldError`, `EmptyState`, `RouteFallback`)
+> sobre Tailwind directo. `shared/components/ui/` quedó como carpeta vacía
+> (solo tiene su `README.md` explicando el plan original) — nada la importa;
+> es candidata a borrarse. `package.json` no tiene ni Radix ni
+> `class-variance-authority`, solo `lucide-react` (íconos) y `sonner` (toasts).
 
 - **Tailwind v4**: se carga con el plugin `@tailwindcss/vite` en `vite.config.ts`
   (sin `postcss.config.js`). La config es CSS-first: `styles/index.css` hace
   `@import 'tailwindcss'` y define los tokens en un bloque `@theme`. No hay
-  `tailwind.config.ts` salvo que el CLI de shadcn lo pida.
+  `tailwind.config.ts`.
 - Clases de utilidad en el JSX; combinaciones condicionales con `cn(...)` de
   `shared/lib/cn.ts`. Sin CSS Modules ni styled-components.
-- Los componentes que genera el CLI de shadcn se copian a
-  `shared/components/ui/` y **se editan libremente** (son código del repo, no una
-  dependencia). Tras generarlos, ajustar los imports que el CLI deja con alias
-  `@/` a rutas relativas (ver §6).
-- Tokens de color / radios en el `@theme` de `styles/index.css`; un solo tema,
-  sin dark mode en esta entrega.
+- Tipografía **Manrope** (`@fontsource/manrope`, con `@fontsource/poppins` de
+  respaldo) y paleta rosa pastel + blanco definidos en el `@theme` de
+  `styles/index.css`; un solo tema, sin dark mode en esta entrega. Iconografía
+  exclusivamente `lucide-react` — prohibido el emoji en texto visible.
+  Contexto de esta decisión visual en
+  `openspec/changes/build-frontend-views/proposal.md`.
 
 ### 3.8 Tests
 
@@ -323,8 +354,7 @@ JWT (ver `README.md` §Autenticación).
 
 - **Imports siempre relativos** (`../../shared/lib/cn`), nunca alias `@/`
   (preferencia permanente del proyecto: "para evitarnos problemas luego").
-  `tsconfig.json` no define `paths`. Si el CLI de shadcn genera imports con `@/`,
-  se reescriben a relativos al copiar el componente.
+  `tsconfig.json` no define `paths`.
 - TypeScript en `strict`; sin `any` (usar `unknown` + narrowing). `noUncheckedIndexedAccess` habilitado.
 - Componentes de función + hooks; nada de clases salvo el `ErrorBoundary`.
 - Un componente/hook público por archivo, archivo = nombre del símbolo.

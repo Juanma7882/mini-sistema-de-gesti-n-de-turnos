@@ -18,6 +18,7 @@ export const turnosHub = {
     connection = new signalR.HubConnectionBuilder()
       .withUrl(hubUrl(), { accessTokenFactory: () => session.getToken() ?? '' })
       .withAutomaticReconnect()
+      .configureLogging(signalR.LogLevel.Warning)
       .build()
     connection.on(EVENTO_TURNO_CAMBIADO, (turno: TurnoDto) => {
       handlers.forEach((handler) => handler(turno))

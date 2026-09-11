@@ -46,6 +46,7 @@ coverage*.xml
 coverage*.info
 BenchmarkDotNet.Artifacts/
 
+.claude/settings.json
 # ─────────────────────────────────────────────────────────────
 # Secretos y config local (NO commitear)
 # appsettings.json va al repo con claves vacías / placeholder

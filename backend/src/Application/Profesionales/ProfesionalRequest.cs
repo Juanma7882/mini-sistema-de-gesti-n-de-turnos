@@ -1,7 +1,9 @@
 namespace Turnos.Application.Profesionales;
 
 /// <summary>Body de <c>POST</c>/<c>PUT /profesionales</c>. El servicio normaliza
-/// <see cref="Nombre"/> y <see cref="Apellido"/> antes de persistir.</summary>
+/// <see cref="Nombre"/> y <see cref="Apellido"/> (<c>TextoNormalizer.NombrePropio</c>)
+/// y <see cref="Especialidad"/> (<c>TextoNormalizer.TextoLibre</c>) antes de
+/// persistir.</summary>
 public sealed record ProfesionalRequest
 {
     public string Nombre { get; init; } = string.Empty;

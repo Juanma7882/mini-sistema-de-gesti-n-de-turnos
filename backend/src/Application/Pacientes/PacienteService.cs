@@ -38,7 +38,7 @@ public sealed class PacienteService(IPacienteRepository repository, IClock clock
             Nombre = TextoNormalizer.NombrePropio(request.Nombre),
             Apellido = TextoNormalizer.NombrePropio(request.Apellido),
             Telefono = request.Telefono.Trim(),
-            ObraSocial = request.ObraSocial.Trim(),
+            ObraSocial = TextoNormalizer.TextoLibre(request.ObraSocial),
             CreatedAt = clock.UtcNow,
         };
 
@@ -56,7 +56,7 @@ public sealed class PacienteService(IPacienteRepository repository, IClock clock
         paciente.Nombre = TextoNormalizer.NombrePropio(request.Nombre);
         paciente.Apellido = TextoNormalizer.NombrePropio(request.Apellido);
         paciente.Telefono = request.Telefono.Trim();
-        paciente.ObraSocial = request.ObraSocial.Trim();
+        paciente.ObraSocial = TextoNormalizer.TextoLibre(request.ObraSocial);
 
         repository.Update(paciente);
         await repository.SaveChangesAsync(ct);

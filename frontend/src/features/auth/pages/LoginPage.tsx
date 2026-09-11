@@ -5,6 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { AlertCircle, Eye, EyeOff, HeartPulse, Loader2, Lock, Mail } from 'lucide-react'
 import { useAuth } from '../../../core/auth/useAuth'
 import { ApiError } from '../../../core/api/httpClient'
+import { env } from '../../../core/config/env'
 import { FieldError } from '../../../shared/components/FieldError'
 import { useProblemForm } from '../../../shared/hooks/useProblemForm'
 import { loginSchema, type LoginFormValues } from '../schemas/loginSchema'
@@ -27,10 +28,9 @@ export function LoginPage() {
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
-    // Credenciales de demo sembradas por DbSeeder (backend/.../Seed/DbSeeder.cs); solo en dev.
-    defaultValues: import.meta.env.DEV
-      ? { email: 'admin@clinica.test', password: 'Admin123*' }
-      : undefined,
+    // Ingreso rápido en dev: viene de VITE_DEMO_EMAIL/VITE_DEMO_PASSWORD (.env local,
+    // no versionado); sin esas variables el form arranca vacío.
+    defaultValues: env.demoCredentials,
   })
 
   const applyProblem = useProblemForm<LoginFormValues>(setError)

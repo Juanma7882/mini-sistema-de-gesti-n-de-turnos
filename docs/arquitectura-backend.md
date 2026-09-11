@@ -35,6 +35,24 @@ EF Core. El `AppDbContext` queda **interno a Infrastructure** (no se expone a
 Application). Sin Unit of Work: cada caso de uso toca un agregado y el repo
 persiste. Cada repo queda chico (3-6 métodos).
 
+**Excepción a la regla de capas — `ITurnoNotifier`:** es la única interfaz de
+Application cuya implementación **no** vive en Infrastructure. `ITurnoNotifier`
+se define en `Application/Turnos` (el `TurnoService` la usa para avisar cambios
+de estado), pero `SignalRTurnoNotifier` vive en `Api/Realtime` porque necesita
+`IHubContext<TurnoHub>`, un tipo de ASP.NET Core que solo tiene sentido en la
+capa de host. Ver §1.1.
+
+### 1.1 Realtime (SignalR)
+
+`TurnoHub` (`Api/Realtime/TurnoHub.cs`, mapeado en `/hubs/turnos`) agrupa cada
+conexión por rol al conectarse: todas las conexiones Admin van al grupo
+`admins`, y cada Profesional se suma a `profesional-{profesionalId}` (claim
+`profesionalId` del JWT). `SignalRTurnoNotifier` implementa `ITurnoNotifier` y,
+en cada cambio de turno, emite el evento `turnoCambiado` al grupo `admins` y al
+grupo del profesional dueño del turno — así cada cliente solo recibe lo que le
+corresponde sin filtrar del lado del front. Se registra como
+`AddScoped<ITurnoNotifier, SignalRTurnoNotifier>()` en `Api/DependencyInjection.cs`.
+
 ---
 
 ## 2. Layout de la solución
@@ -48,8 +66,10 @@ backend/                           ← todo el backend vive acá (junto a fronte
     Infrastructure/   Turnos.Infrastructure.csproj
     Api/              Turnos.Api.csproj          ← proyecto de arranque (host EF)
   tests/
-    Domain.Tests/     Turnos.Domain.Tests.csproj
-    Api.Tests/        Turnos.Api.Tests.csproj    ← integración (WebApplicationFactory)
+    Domain.Tests/          Turnos.Domain.Tests.csproj
+    Application.Tests/     Turnos.Application.Tests.csproj    ← Services con fakes en memoria
+    Infrastructure.Tests/  Turnos.Infrastructure.Tests.csproj ← repos contra SQLite real
+    Api.Tests/              Turnos.Api.Tests.csproj    ← integración (WebApplicationFactory)
 ```
 
 - **Carpeta** = nombre corto (`src/Api`). **Assembly + namespace raíz** = con prefijo
@@ -208,6 +228,15 @@ aceptable, pero mantener **una sola** de las dos formas en toda la capa.
 - Método `Metodo_Escenario_ResultadoEsperado`
   (`CambiarEstado_DePendienteACancelado_DevuelveOk`,
   `CrearTurno_SlotOcupado_Devuelve409`).
+- `Application.Tests` prueba los `Service` contra dobles en memoria, no contra EF:
+  `Fake<Interfaz>` para dependencias simples (`FakeClock`, `FakePasswordHasher`,
+  `FakeJwtTokenService`, `FakeCurrentUser`, `FakeUsuarioRepository`,
+  `RecordingTurnoNotifier`) e `InMemory<Agregado>Repository` para repos que
+  necesitan simular filtros/paginación (`InMemoryPacienteRepository`,
+  `InMemoryProfesionalRepository`, `InMemoryTurnoRepository`).
+- `Infrastructure.Tests` prueba los repos EF reales contra SQLite (vía
+  `SqliteDatabaseFixture`) — es donde se verifica el índice único parcial
+  anti-doble-turno.
 
 ---
 

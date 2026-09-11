@@ -31,7 +31,7 @@ export function FiltrosTurnos({
 }: FiltrosTurnosProps) {
   return (
     <div className="mb-4 flex flex-wrap items-end gap-3">
-      <div>
+      <div className='flex gap-2 items-center'>
         <label className="text-meta font-medium text-muted-foreground" htmlFor="desde">
           Desde
         </label>
@@ -43,7 +43,7 @@ export function FiltrosTurnos({
           className="mt-1 rounded-[10px] border border-border px-3 py-1.5 text-sm outline-none"
         />
       </div>
-      <div>
+      <div className='flex gap-2 items-center'>
         <label className="text-meta font-medium text-muted-foreground" htmlFor="hasta">
           Hasta
         </label>
@@ -55,7 +55,7 @@ export function FiltrosTurnos({
           className="mt-1 rounded-[10px] border border-border px-3 py-1.5 text-sm outline-none"
         />
       </div>
-      <div>
+      <div className='flex gap-2 items-center'>
         <label className="text-meta font-medium text-muted-foreground" htmlFor="estado">
           Estado
         </label>
@@ -74,7 +74,7 @@ export function FiltrosTurnos({
         </select>
       </div>
       {isAdmin && (
-        <div>
+        <div className='flex gap-2 items-center'>
           <label className="text-meta font-medium text-muted-foreground" htmlFor="profesionalId">
             Profesional
           </label>

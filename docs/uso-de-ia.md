@@ -47,9 +47,6 @@ literal):
   Conventional Commits, separando deliberadamente el `fix(api)` del
   `ValidationFilter` de los `feat(api)` que lo rodean (reconstruyendo el
   archivo a su estado *pre-fix* para el primer commit).
-- *"¿que nesesesitas de mi cuenta en railway?"* → aclaración de que no hacen
-  falta credenciales compartidas: o se sigue el runbook a mano, o se autentica
-  la Railway CLI en la propia terminal del usuario (la IA nunca ve el token).
 - *"termina la parte 12 y luego lo hacemos"* → esta documentación.
 
 ## Qué se revisó y corrigió

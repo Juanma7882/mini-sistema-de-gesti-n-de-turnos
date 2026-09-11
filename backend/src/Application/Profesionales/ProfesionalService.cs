@@ -66,7 +66,7 @@ public sealed class ProfesionalService(
 
         var profesional = new Profesional
         {
-            Especialidad = request.Especialidad.Trim(),
+            Especialidad = TextoNormalizer.TextoLibre(request.Especialidad),
             CreatedAt = clock.UtcNow,
             Usuario = usuario,
         };
@@ -87,7 +87,7 @@ public sealed class ProfesionalService(
 
         profesional.Usuario.Nombre = TextoNormalizer.NombrePropio(request.Nombre);
         profesional.Usuario.Apellido = TextoNormalizer.NombrePropio(request.Apellido);
-        profesional.Especialidad = request.Especialidad.Trim();
+        profesional.Especialidad = TextoNormalizer.TextoLibre(request.Especialidad);
 
         repository.Update(profesional);
         await repository.SaveChangesAsync(ct);

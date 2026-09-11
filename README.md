@@ -5,8 +5,20 @@ turnos, con dos tipos de usuario (Administrador y Profesional).
 
 > **Estado:** backend completo (capas, auth, endpoints, tests de integración,
 > Dockerfile y CI) y desplegable — solo falta cargar la instancia en Railway
-> (ver `backend.md` §11.3). El frontend cubre el flujo funcional completo de
-> las tres entidades; el detalle de qué falta pulir vive en `frontend.md`.
+> (ver [`docs/backend.md`](docs/backend.md) §11.3). El frontend cubre el flujo
+> funcional completo de las tres entidades; el detalle de qué falta pulir vive
+> en [`docs/frontend.md`](docs/frontend.md).
+
+---
+
+## Índice
+
+[Stack](#stack) · [Cómo correr localmente](#cómo-correr-el-proyecto-localmente) ·
+[Variables de entorno](#variables-de-entorno) · [Credenciales de prueba](#credenciales-de-prueba) ·
+[Modelo de datos](#modelo-de-datos) · [API](#api) · [Auth y permisos](#autenticación-y-permisos) ·
+[Tiempo real](#tiempo-real-signalr) · [Máquina de estados](#máquina-de-estados-del-turno) ·
+[Flujos de uso](#flujos-de-uso) · [Validaciones](#validaciones-principales) ·
+[Estructura](#estructura-del-proyecto) · [Más documentación](#más-documentación)
 
 ---
 
@@ -15,9 +27,10 @@ turnos, con dos tipos de usuario (Administrador y Profesional).
 | Capa | Tecnología |
 |---|---|
 | Backend | ASP.NET Core Web API, C# / .NET 9 (capas Domain / Application / Infrastructure / Api) |
-| Frontend | React + TypeScript (Vite), Tailwind CSS + shadcn/ui |
+| Frontend | React + TypeScript (Vite), Tailwind CSS v4 (componentes propios, sin shadcn/ui) · lucide-react · sonner |
 | Base de datos | SQLite + EF Core (migraciones) |
-| Auth | JWT propio (access token) + refresh token con rotación · hash BCrypt |
+| Auth | JWT propio (access token) + refresh token con rotación · hash BCrypt · rate limit en login |
+| Tiempo real | SignalR (`/hubs/turnos`) — push de cambios de turno a Admin y al profesional dueño |
 | Tests | xUnit + FluentAssertions |
 | Deploy | Backend en Railway (Dockerfile + volume para el `.db`) · Frontend en Vercel |
 | CI | GitHub Actions (build + test) |
@@ -77,6 +90,8 @@ Swagger queda disponible en `http://localhost:5125/swagger` (solo en
 | Variable | Descripción | Ejemplo |
 |---|---|---|
 | `VITE_API_URL` | URL base de la API | `https://mae-turnos.up.railway.app/api` |
+| `VITE_DEMO_EMAIL` | Opcional, solo dev: prellena el email del login | `admin@clinica.test` |
+| `VITE_DEMO_PASSWORD` | Opcional, solo dev: prellena la contraseña del login | _(secreto local)_ |
 
 > No se versionan contraseñas ni secretos. Localmente usar `appsettings.Development.json`
 > (ignorado por git) o variables de entorno; en producción, las variables de Railway/Vercel.
@@ -102,8 +117,9 @@ Todos los pacientes, profesionales y turnos de ejemplo son **ficticios**.
 
 ```
 Paciente( Id, Nombre, Apellido, Telefono, ObraSocial, CreatedAt, DeletedAt? )
-Profesional( Id, Nombre, Apellido, Especialidad, CreatedAt, DeletedAt? )
-Usuario( Id, Email[unique], PasswordHash, Rol{Admin|Profesional}, ProfesionalId? )
+Usuario( Id, Nombre, Apellido, Email[unique], PasswordHash, Rol{Admin|Profesional},
+         CreatedAt, DeletedAt? )
+Profesional( Id, Especialidad, CreatedAt, UsuarioId[FK 1:1 obligatoria → Usuario] )
 Turno( Id, PacienteId, ProfesionalId, Inicio[DateTime], Estado[int], Notas?,
        CreatedAt, UpdatedAt )
 RefreshToken( Id, UsuarioId, TokenHash[SHA-256], ExpiresAt, RevokedAt?, ReplacedByHash? )
@@ -117,6 +133,13 @@ Regla anti doble-turno:
 
 Decisiones de modelado:
 
+- **`Usuario` es la única fuente de verdad de la identidad de la persona**
+  (`Nombre`/`Apellido`) y de su baja (`DeletedAt`), para cualquier rol —
+  Admin incluido, que no tiene `Profesional`. `Profesional` es el perfil de
+  negocio (especialidad, turnos) y **siempre** requiere un `Usuario` (FK 1:1
+  obligatoria de ese lado); dar de baja al usuario también le corta el login
+  al profesional, mismo flag. Detalle y alternativas descartadas en
+  [`docs/database.md`](docs/database.md#3-usuario).
 - **`Inicio` como un solo `DateTime`** (precisión de minuto). La UI muestra dos
   selectores (fecha + hora); el dominio guarda un instante. Ordenar y consultar
   quedan triviales, y el índice `(ProfesionalId, Inicio)` es literal a "misma
@@ -124,10 +147,13 @@ Decisiones de modelado:
 - **Colisión por slot exacto**, no por solape con duración. La base misma
   garantiza la regla mediante el índice único parcial.
 - **`Estado` como int enum** en la base; viaja como string en el JSON.
-- **Soft delete** (`DeletedAt`) en Paciente y Profesional; el Turno se da de baja
+- **Soft delete** (`DeletedAt`) en Paciente y Usuario; el Turno se da de baja
   pasándolo a `Cancelado`. Borrar un paciente/profesional con turnos activos
   responde **409**.
 - **Horarios en hora local naïve**: una única clínica, "las 15:00 son las 15:00".
+
+> Esquema completo columna por columna (tipos EF, índices, migraciones) en
+> [`docs/database.md`](docs/database.md).
 
 ---
 
@@ -140,7 +166,7 @@ excepto `POST /auth/login` y `POST /auth/refresh`.
 
 | Método | Ruta | Rol | Request | Éxito | Errores |
 |---|---|---|---|---|---|
-| POST | `/auth/login` | anónimo | `{ email, password }` | **200** `{ token, user }` + `Set-Cookie: rt` | 400 · 401 credenciales inválidas |
+| POST | `/auth/login` | anónimo | `{ email, password }` | **200** `{ token, user }` + `Set-Cookie: rt` | 400 · 401 credenciales inválidas · **429** rate limit |
 | POST | `/auth/refresh` | cookie `rt` | — | **200** `{ token }` + `Set-Cookie: rt` (rotado) | 401 cookie ausente/expirada/revocada |
 | POST | `/auth/logout` | Bearer | — | **204** (revoca `rt`) | 401 |
 | GET | `/auth/me` | Bearer | — | **200** `{ id, nombre, email, role, profesionalId? }` | 401 |
@@ -217,6 +243,7 @@ se renderice sin llamadas N+1.
 | **403** | Autenticado pero rol incorrecto (Profesional llamando endpoint solo-Admin) |
 | **404** | Recurso inexistente **o** Profesional accediendo a un turno ajeno |
 | **409** | Slot ya ocupado · transición de estado ilegal · borrar con turnos activos |
+| **429** | Más de 5 intentos de `/auth/login` por IP en 60s (rate limit fijo, protege contra fuerza bruta) |
 | **500** | Error no controlado |
 
 Cuerpo de error: `ProblemDetails` (RFC 7807).
@@ -241,12 +268,16 @@ Cuerpo de error: `ProblemDetails` (RFC 7807).
 |---|---|---|
 | Vida | ~15 min | ~14 días |
 | Formato | JWT HS256 con claims `sub`, `email`, `role`, `profesionalId?` | string opaco aleatorio |
-| Dónde vive | solo en memoria del cliente | cookie `httpOnly` `Secure` `SameSite`, `Path=/auth/refresh` |
+| Dónde vive | solo en memoria del cliente | cookie `httpOnly` `Secure` `SameSite=None`, `Path=/api/auth` |
 | En el servidor | no se guarda | se guarda **hasheado** (SHA-256) en `RefreshToken`, revocable |
 | Se envía | `Authorization: Bearer` en cada request | automático, solo al endpoint de refresh |
 
 Rotación **revoke-on-use**: cada `/auth/refresh` revoca el token usado y emite uno
 nuevo. La detección de reuso completa queda como mejora futura.
+
+**Rate limit en `/auth/login`**: máximo 5 intentos por IP cada 60s (ventana fija),
+**429** con `ProblemDetails` si se supera. Frena fuerza bruta contra BCrypt; no
+reemplaza un lockout por cuenta (ver [`docs/mejoras-futuras.md`](docs/mejoras-futuras.md)).
 
 ### Un solo login para ambos roles
 
@@ -311,6 +342,22 @@ Transiciones fuera del diagrama → **409**. Se valida en la capa Application pa
 ambos roles; el rol solo define qué transiciones legales puede disparar cada uno.
 `Atendido` y `Cancelado` son terminales para todos (revertir = mejora futura con
 auditoría).
+
+---
+
+## Tiempo real (SignalR)
+
+Cada cambio de turno (crear, editar, cambiar estado) se empuja por WebSocket a
+`/hubs/turnos`, además de quedar disponible por polling vía la API REST normal:
+
+- Cada conexión Admin se suma al grupo `admins`; cada Profesional se suma a
+  `profesional-{profesionalId}` (tomado del claim del JWT, igual que en la API REST).
+- En cada cambio, el servidor emite el evento `turnoCambiado` al grupo `admins`
+  **y** al grupo del profesional dueño — cada cliente recibe solo lo suyo, sin
+  filtrar del lado del front.
+
+Detalle de implementación (`TurnoHub`, `ITurnoNotifier`) en
+[`docs/arquitectura-backend.md`](docs/arquitectura-backend.md#11-realtime-signalr).
 
 ---
 
@@ -403,8 +450,15 @@ un enum que no matchea ningún nombre) — los dos caminos terminan en el mismo
 │       ├── Application.Tests/  servicios contra fakes en memoria
 │       ├── Infrastructure.Tests/ índices únicos parciales contra SQLite real
 │       └── Api.Tests/          integración: Api real (WebApplicationFactory) + SQLite temporal
-├── frontend/                   React + TS + Vite + Tailwind + shadcn/ui
-├── docs/                       decisiones técnicas, uso de IA, mejoras futuras
+├── frontend/                    React + TS (Vite) + Tailwind v4 — anillos app/core/shared/features
+│   └── src/
+│       ├── app/                 bootstrap: main.tsx, App.tsx, providers, router (todas las rutas)
+│       ├── core/                infra transversal: cliente HTTP + interceptor 401, auth (context/guards), layout raíz, realtime (SignalR), env
+│       ├── shared/               componentes/hooks/lib reutilizables, sin conocer entidades de dominio
+│       ├── features/             auth · pacientes · profesionales · turnos (pages, components, api, hooks, schemas por feature)
+│       ├── pages/                404, 403
+│       └── styles/               tema Tailwind
+├── docs/                       arquitectura, modelo de datos, decisiones, IA, mejoras futuras (ver abajo)
 ├── scripts/                    smoke.sh — smoke test post-deploy
 ├── Dockerfile                  build del backend para Railway
 ├── .dockerignore
@@ -413,10 +467,19 @@ un enum que no matchea ningún nombre) — los dos caminos terminan en el mismo
 
 ---
 
-## Decisiones técnicas · Uso de IA · Mejoras futuras
+## Más documentación
 
-Ver `docs/`:
+Este README es el contrato: qué existe, cómo se usa, y qué decisiones de
+modelado son visibles desde afuera (endpoints, DTOs, roles, estados). El
+**cómo está armado por dentro** y el **por qué** de cada decisión no obvia
+viven en `docs/`:
 
-- [`docs/decisiones-tecnicas.md`](docs/decisiones-tecnicas.md)
-- [`docs/uso-de-ia.md`](docs/uso-de-ia.md) — herramientas, prompts principales, qué se revisó/corrigió
-- [`docs/mejoras-futuras.md`](docs/mejoras-futuras.md)
+| Documento | Contenido |
+|---|---|
+| [`docs/arquitectura-backend.md`](docs/arquitectura-backend.md) | Capas, layout de carpetas, nomenclatura del backend (.NET) |
+| [`docs/arquitectura-frontend.md`](docs/arquitectura-frontend.md) | Anillos `app/features/shared/core`, layout, convenciones del frontend (React) |
+| [`docs/database.md`](docs/database.md) | Esquema completo columna por columna (tipos EF, índices, migraciones) |
+| [`docs/decisiones-tecnicas.md`](docs/decisiones-tecnicas.md) | Por qué se eligió cada cosa no obvia (auth sin Identity, controllers vs minimal APIs, etc.) |
+| [`docs/uso-de-ia.md`](docs/uso-de-ia.md) | Herramientas, prompts principales, bugs reales encontrados y corregidos con IA |
+| [`docs/mejoras-futuras.md`](docs/mejoras-futuras.md) | Qué quedó deliberadamente fuera de alcance, y por qué |
+| [`docs/backend.md`](docs/backend.md) · [`docs/frontend.md`](docs/frontend.md) | Listas de tareas de la implementación (checklists, no contrato) |
