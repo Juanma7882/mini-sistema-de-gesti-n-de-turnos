@@ -44,17 +44,60 @@ deploy/CI. Tareas de máx. ~2 h. El rol **Paciente** NO entra acá (ver
 - [ ] 4.4 `IClock` (`UtcNow` / hora local naïve de clínica) para expiraciones y validación "a futuro".
 - [ ] 4.5 Seeder: si la base está vacía, crea usuario Admin (`admin@clinica.test`) y Profesional (`dra.gomez@clinica.test`) con password desde `Seed__*`, + pacientes/profesionales/turnos ficticios de demo.
 
-## 5. Application — DTOs, validación, casos de uso
+## 5. Application — contratos, DTOs y casos de uso
 
-- [ ] 5.1 DTOs de respuesta: `PacienteDto`, `ProfesionalDto`, `TurnoDto` (con `paciente`/`profesional` embebidos), `PagedResult<T>`.
-- [ ] 5.2 DTOs de request + validadores FluentValidation: `LoginRequest`, `PacienteRequest`, `ProfesionalRequest`, `TurnoRequest`, `CambiarEstadoRequest`.
-- [ ] 5.3 Reglas de validación de `TurnoRequest`: `inicio` obligatorio, a futuro, precisión de minuto; `pacienteId`/`profesionalId` existentes y no dados de baja.
-- [ ] 5.4 Casos de uso Pacientes: `ListarPacientes` (search + paginación), `ObtenerPaciente`, `CrearPaciente`, `EditarPaciente`, `BajaPaciente` (soft; 409 si tiene turnos activos).
-- [ ] 5.5 Casos de uso Profesionales: análogos a Pacientes (misma regla 409 en baja).
-- [ ] 5.6 Casos de uso Turnos: `ListarTurnos` (filtros `desde/hasta/estado/pacienteId/profesionalId` + paginación + filtro forzado por rol Profesional), `ObtenerTurno` (404 si ajeno para Profesional).
-- [ ] 5.7 `CrearTurno` / `EditarTurno`: valida existencia y baja de paciente/profesional; anti doble-turno (chequeo + captura `DbUpdateException` del índice → 409); `EditarTurno` excluye el propio `Id`.
-- [ ] 5.8 `CambiarEstadoTurno`: valida transición según máquina de estados y rol; `Cancelado` libera el slot; transición ilegal → 409.
-- [ ] 5.9 Excepciones de dominio tipadas (`NotFoundException`, `ConflictException`, `ValidationException`, `ForbiddenException`) para mapear a status codes en la Api.
+Se construye contra **interfaces** (`Application/Abstractions`): los servicios son
+orquestación pura y se testean con fakes sin esperar a Infra (§3–4), que solo
+implementa esas interfaces. Orden: A → B → (C ∥ E) → D → F.
+
+### 5.A Andamiaje
+
+- [x] 5.1 `Turnos.Application.csproj`: agregar `FluentValidation`.
+- [x] 5.2 `Common/`: `PagedResult<T> { Items, Total, Page, PageSize }` y `PageRequest { Page = 1, PageSize = 20 }` con tope `PageSize <= 100`.
+- [x] 5.3 `Common/Exceptions/`: `NotFoundException`, `ConflictException`, `ValidationException` (con `IDictionary<string, string[]> Errors`), `UnauthorizedException`, `ForbiddenException`. Base `DomainException` en `Domain/Common`.
+- [x] 5.4 `Abstractions/`: `IClock` (`UtcNow`, `LocalNow`), `ICurrentUser` (`UsuarioId`, `Rol`, `ProfesionalId?`), `IPasswordHasher`, `IJwtTokenService`, `IRefreshTokenService` y `IPacienteRepository` / `IProfesionalRepository` / `ITurnoRepository` / `IUsuarioRepository` / `IRefreshTokenRepository`.
+- [x] 5.5 `Common/TextoNormalizer.cs`: `NombrePropio(string)` → trim + por palabra, primera letra mayúscula y resto minúscula, cultura invariante (`"  maRÍa  josé "` → `"María José"`).
+- [x] 5.6 `DependencyInjection.cs` → `AddApplication()`: servicios `Scoped` + `AddValidatorsFromAssembly`.
+
+### 5.B DTOs, Request, Validators, Mappers
+
+- [x] 5.7 Respuesta (`sealed record`, props `init`, enums como string): `PacienteDto`, `ProfesionalDto`, `TurnoDto` (con `paciente`/`profesional` embebidos), `MeDto`, `AuthResultDto { token, user }`, `PagedResult<T>` (ya en 5.2).
+- [x] 5.8 Request + validadores FluentValidation: `LoginRequest`, `PacienteRequest`, `ProfesionalRequest`, `TurnoRequest`, `CambiarEstadoRequest`.
+- [x] 5.9 `PacienteRequestValidator` / `ProfesionalRequestValidator`: campos `NotEmpty` + `MaximumLength`. La normalización de nombre/apellido NO va en el validador (se aplica en el servicio, ver 5.5).
+- [x] 5.10 `TurnoRequestValidator`: `pacienteId`/`profesionalId` `> 0`; `inicio` obligatorio, a futuro (`> IClock.LocalNow`), precisión de minuto (`Second == 0 && Millisecond == 0`). Existencia/baja de paciente y profesional se valida en `TurnoService`.
+- [x] 5.11 `CambiarEstadoRequest`: `estado` dentro del enum `EstadoTurno`.
+- [x] 5.12 Mappers estáticos `PacienteMapper` / `ProfesionalMapper` / `TurnoMapper` (`ToDto`).
+
+### 5.C PacienteService y ProfesionalService
+
+- [x] 5.13 `PacienteService`: `ListarAsync` (search `contains` case-insensitive sobre `Nombre + Apellido`, solo activos, paginado), `ObtenerAsync` (404), `CrearAsync` (normaliza `Nombre`/`Apellido` con `TextoNormalizer`; `CreatedAt = IClock.UtcNow`), `EditarAsync` (404; normaliza), `BajaAsync` (`DeletedAt = IClock.UtcNow`; 409 si tiene turnos en `Pendiente`/`Confirmado`).
+- [x] 5.14 `ProfesionalService`: idéntico a 5.13 (search sobre `Nombre + Apellido`, misma normalización y misma regla 409 en baja).
+- [x] 5.15 Métodos de `IPacienteRepository` / `IProfesionalRepository`: `GetPagedAsync(search, page, pageSize, ct) -> (items, total)`, `GetByIdAsync(id, ct)`, `AddAsync`, `Update` (sync, sin I/O), `TieneTurnosActivosAsync(id, ct)`, `SaveChangesAsync(ct)`.
+
+### 5.D TurnoService
+
+- [x] 5.16 `ListarAsync(TurnoFiltro, PageRequest, ct)` — `TurnoFiltro { Desde?, Hasta?, Estado?, PacienteId?, ProfesionalId? }`. Si `ICurrentUser.Rol == Profesional`: ignora `filtro.ProfesionalId` y fuerza `= ICurrentUser.ProfesionalId`. Repo hace `Include` de paciente/profesional (sin N+1).
+- [x] 5.17 `ObtenerAsync(id, ct)`: 404 si no existe **o** `Rol == Profesional && turno.ProfesionalId != ICurrentUser.ProfesionalId`.
+- [x] 5.18 `CrearAsync(TurnoRequest, ct)`: paciente y profesional existen y no dados de baja (si no → `NotFoundException`); pre-chequeo anti doble-turno (`ExisteSlotAsync`, `excluirId: null`) → `ConflictException`; `Estado = Pendiente`; `CreatedAt = UpdatedAt = IClock.UtcNow`.
+- [x] 5.19 `EditarAsync(id, TurnoRequest, ct)`: carga (404); **si `Estado` es `Cancelado` o `Atendido` → `ConflictException`** (turno cerrado: hay que sacar uno nuevo); revalida paciente/profesional; anti doble-turno excluyendo el propio `Id`; `UpdatedAt = IClock.UtcNow`.
+- [x] 5.20 `CambiarEstadoAsync(id, EstadoTurno, ct)`: carga (404, mismo criterio de ajeno que 5.17); `MaquinaEstados.EsTransicionValida(actual, nuevo)` — ambos roles disparan cualquier transición legal sobre sus propios turnos; transición ilegal → `ConflictException`; `UpdatedAt`.
+- [x] 5.21 Métodos de `ITurnoRepository`: `GetPagedAsync(TurnoFiltro, page, pageSize, ct)`, `GetByIdAsync(id, ct)` (con includes), `AddAsync`, `Update` (sync, sin I/O), `ExisteSlotAsync(profesionalId, inicio, int? excluirId, ct)`, `SaveChangesAsync(ct)`. La colisión de carrera se re-lanza como `ConflictException` desde `TurnoRepository` (captura `DbUpdateException` del índice único parcial).
+
+### 5.E AuthService (en `Application/Auth`)
+
+- [x] 5.22 `LoginAsync(LoginRequest, ct)`: usuario por email + `IPasswordHasher.Verify`; `UnauthorizedException` genérica si falla; emite access (`IJwtTokenService`) + refresh opaco (`IRefreshTokenService`, hash SHA-256 persistido). Devuelve `AuthResultDto` + token crudo de refresh para la cookie.
+- [x] 5.23 `RefreshAsync(rawToken, ct)`: valida hash/expiración/no-revocado; revoke-on-use (marca `RevokedAt` + `ReplacedByHash`, emite nuevo); `UnauthorizedException` si inválido.
+- [x] 5.24 `LogoutAsync(rawToken, ct)`: revoca el refresh token actual.
+- [x] 5.25 `MeAsync(ct)`: `ICurrentUser` + `IUsuarioRepository` → `MeDto { id, nombre, email, role, profesionalId? }`.
+
+### 5.F Tests unitarios de servicios
+
+- [x] 5.26 Proyecto `tests/Application.Tests` (xUnit + FluentAssertions) con fakes in-memory de repos, `IClock` fijo y `ICurrentUser` configurable.
+- [x] 5.27 Paciente/Profesional: `CrearAsync` normaliza `"jUAN"` → `"Juan"` y setea `CreatedAt`; `BajaAsync` con turno activo → `ConflictException`, sin turnos → ok; `ObtenerAsync` inexistente → `NotFoundException`.
+- [x] 5.28 Turno: `CrearAsync` con paciente dado de baja → `NotFoundException`; slot ocupado → `ConflictException`; `EditarAsync` sobre turno `Cancelado`/`Atendido` → `ConflictException`; `EditarAsync` sobre el mismo slot propio → ok.
+- [x] 5.29 `CambiarEstadoAsync`: matriz legal/ilegal (`Pendiente→Atendido` → 409, `Pendiente→Confirmado` → ok); Profesional sobre turno ajeno → `NotFoundException`.
+- [x] 5.30 `ListarAsync` como Profesional ignora `filtro.ProfesionalId`.
+- [x] 5.31 Auth: credenciales malas → `UnauthorizedException`; `RefreshAsync` rota y el token previo queda revocado.
 
 ## 6. Api — pipeline y auth
 
