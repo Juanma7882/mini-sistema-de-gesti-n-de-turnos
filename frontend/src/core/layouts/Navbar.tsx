@@ -1,51 +1,37 @@
-import { NavLink, useNavigate } from 'react-router-dom'
-import type { Role } from '../auth/session'
+import { LogOut } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { InitialsBadge } from './InitialsBadge'
 
-const LINKS: { to: string; label: string; roles: Role[] }[] = [
-  { to: '/turnos', label: 'Turnos', roles: ['Admin', 'Profesional'] },
-  { to: '/pacientes', label: 'Pacientes', roles: ['Admin'] },
-  { to: '/profesionales', label: 'Profesionales', roles: ['Admin'] },
-]
-
+/** Identidad del usuario + logout (frontend-app-shell spec, "Navbar con identidad de usuario y logout"). */
 export function Navbar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+
+  if (!user) return null
 
   const onLogout = async () => {
     await logout()
     navigate('/login', { replace: true })
   }
 
-  const links = user ? LINKS.filter((link) => link.roles.includes(user.role)) : []
-
   return (
-    <header className="flex items-center justify-between border-b px-6 py-3">
-      <nav className="flex gap-4 text-sm">
-        {links.map((link) => (
-          <NavLink
-            key={link.to}
-            to={link.to}
-            className={({ isActive }) => (isActive ? 'font-semibold' : 'text-muted-foreground')}
-          >
-            {link.to === '/turnos' && user?.role === 'Profesional' ? 'Mis turnos' : link.label}
-          </NavLink>
-        ))}
-      </nav>
-      <div className="flex items-center gap-3 text-sm">
-        {user && (
-          <>
-            <InitialsBadge nombre={user.nombre} />
-            <span>
-              {user.nombre} · <span className="text-muted-foreground">{user.role}</span>
-            </span>
-          </>
-        )}
-        <button onClick={onLogout} className="text-muted-foreground hover:text-foreground">
-          Salir
-        </button>
+    <div className="flex w-full items-center gap-2.5">
+      <InitialsBadge nombre={user.nombre} />
+      <div className="flex min-w-0 flex-1 flex-col leading-tight">
+        <span className="truncate text-sm font-medium text-foreground">{user.nombre}</span>
+        <span className="w-fit rounded-md bg-primary-tint px-1.5 py-0.5 text-xs font-medium text-primary-strong">
+          {user.role}
+        </span>
       </div>
-    </header>
+      <button
+        type="button"
+        onClick={onLogout}
+        aria-label="Cerrar sesión"
+        className="shrink-0 rounded-lg p-2 text-muted-foreground hover:bg-primary-tint hover:text-primary-strong"
+      >
+        <LogOut size={16} aria-hidden="true" />
+      </button>
+    </div>
   )
 }

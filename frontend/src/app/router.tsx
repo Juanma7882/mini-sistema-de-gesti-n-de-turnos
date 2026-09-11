@@ -1,4 +1,5 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
+import { RedirectIfAuthenticated } from '../core/auth/RedirectIfAuthenticated'
 import { RequireAuth } from '../core/auth/RequireAuth'
 import { RequireRole } from '../core/auth/RequireRole'
 import { MainLayout } from '../core/layouts/MainLayout'
@@ -12,8 +13,10 @@ import { NotFoundPage } from '../pages/NotFoundPage'
 // Todas las rutas se definen acá; las features no se autorregistran
 // (arquitectura-frontend.md §3.6).
 export const router = createBrowserRouter([
-  { path: '/login', element: <LoginPage /> },
-  { path: '/403', element: <ForbiddenPage /> },
+  {
+    element: <RedirectIfAuthenticated />,
+    children: [{ path: '/login', element: <LoginPage /> }],
+  },
   {
     element: <RequireAuth />,
     children: [
@@ -29,9 +32,10 @@ export const router = createBrowserRouter([
               { path: '/profesionales', element: <ProfesionalesPage /> },
             ],
           },
+          { path: '/403', element: <ForbiddenPage /> },
+          { path: '*', element: <NotFoundPage /> },
         ],
       },
     ],
   },
-  { path: '*', element: <NotFoundPage /> },
 ])

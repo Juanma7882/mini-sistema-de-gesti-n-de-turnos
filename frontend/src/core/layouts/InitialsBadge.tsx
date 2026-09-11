@@ -7,7 +7,7 @@ export function InitialsBadge({ nombre }: { nombre: string }) {
     .join('')
 
   return (
-    <span className="grid size-8 place-items-center rounded-full bg-primary/10 text-xs font-medium text-primary">
+    <span className="grid size-9 shrink-0 place-items-center rounded-[10px] bg-primary-tint text-sm font-semibold text-primary-strong">
       {initials || '?'}
     </span>
   )

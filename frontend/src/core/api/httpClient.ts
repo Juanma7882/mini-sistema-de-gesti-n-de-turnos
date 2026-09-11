@@ -1,5 +1,18 @@
+import { createElement } from 'react'
+import { toast } from 'sonner'
+import { WifiOff } from 'lucide-react'
 import { env } from '../config/env'
 import { parseProblemDetails, type ParsedProblem } from './problemDetails'
+
+const CONNECTION_ERROR_MESSAGE = 'No pudimos conectar con el servidor. Probá de nuevo en un momento.'
+
+/** Toast único para 500 / error de red, sin exponer detalle técnico (frontend-app-shell spec). */
+function notifyConnectionError(): void {
+  toast.error(CONNECTION_ERROR_MESSAGE, {
+    id: 'connection-error',
+    icon: createElement(WifiOff, { size: 18, 'aria-hidden': true }),
+  })
+}
 
 /** Error tipado con el que rechaza toda llamada fallida; nunca se propaga un `Response` crudo. */
 export class ApiError extends Error {
@@ -64,15 +77,30 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       body: body !== undefined ? JSON.stringify(body) : undefined,
     })
 
-  let res = await doFetch(anonymous ? null : getToken())
+  let res: Response
+  try {
+    res = await doFetch(anonymous ? null : getToken())
+  } catch {
+    notifyConnectionError()
+    throw new ApiError(0, { title: 'Network Error', detail: CONNECTION_ERROR_MESSAGE, errors: {} })
+  }
 
   if (res.status === 401 && !anonymous) {
     const newToken = await runRefresh()
     if (newToken) {
-      res = await doFetch(newToken)
+      try {
+        res = await doFetch(newToken)
+      } catch {
+        notifyConnectionError()
+        throw new ApiError(0, { title: 'Network Error', detail: CONNECTION_ERROR_MESSAGE, errors: {} })
+      }
     } else {
       onAuthLost()
     }
+  }
+
+  if (res.status >= 500) {
+    notifyConnectionError()
   }
 
   if (!res.ok) {
