@@ -1,5 +1,6 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { configureHttpClient } from '../api/httpClient'
+import { turnosHub } from '../realtime/turnosHub'
 import { authApi, type AuthUser } from './authApi'
 import { authBroadcast } from './authBroadcast'
 import { session } from './session'
@@ -25,6 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     session.writeSnapshot(null)
     setUser(null)
     setStatus('anonymous')
+    turnosHub.disconnect()
   }, [])
 
   const applySession = useCallback((token: string, nextUser: AuthUser) => {
@@ -32,20 +34,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     session.writeSnapshot({ nombre: nextUser.nombre, role: nextUser.role })
     setUser(nextUser)
     setStatus('authenticated')
+    turnosHub.connect()
   }, [])
 
   // Un 401 en cualquier request dispara esto (vía httpClient); también corre al bootear.
   const refresh = useCallback(async (): Promise<string | null> => {
+    let token: string
     try {
-      const { token } = await authApi.refresh()
-      session.setToken(token)
-      const me = await authApi.me()
-      applySession(token, me)
-      return token
+      token = (await authApi.refresh()).token
     } catch {
+      // Refresh token inválido/ausente: sí es una sesión perdida.
       clearSession()
       return null
     }
+
+    session.setToken(token)
+    try {
+      const me = await authApi.me()
+      applySession(token, me)
+    } catch {
+      // El refresh token rotó bien y el access token es válido: una falla de
+      // /auth/me (red, 500 transitorio) no debe desloguear al usuario.
+      setStatus('authenticated')
+    }
+    return token
   }, [applySession, clearSession])
 
   // Inyecta los hooks de sesión en el cliente HTTP (interceptor 401).

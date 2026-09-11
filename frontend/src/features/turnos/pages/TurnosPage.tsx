@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { AlertTriangle, CalendarSearch, ChevronRight, Plus } from 'lucide-react'
 import { toast } from 'sonner'
@@ -7,6 +7,7 @@ import { DataTable, type Column } from '../../../shared/components/DataTable'
 import { EmptyState } from '../../../shared/components/EmptyState'
 import { formatInicio } from '../../../shared/lib/formatInicio'
 import { useAuth } from '../../../core/auth/useAuth'
+import { turnosHub } from '../../../core/realtime/turnosHub'
 import { useProfesionalesQuery } from '../../profesionales/hooks/useProfesionalesQuery'
 import { useTurnosQuery } from '../hooks/useTurnosQuery'
 import { EstadoBadge } from '../components/EstadoBadge'
@@ -58,6 +59,11 @@ export function TurnosPage() {
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingTurno, setEditingTurno] = useState<TurnoDto | null>(null)
+
+  // Un turno creado/editado/cambiado de estado en otra sesión (ej. el Admin le
+  // asigna un turno a un Profesional logueado en otra pestaña) llega acá y
+  // refresca el listado sin recargar la página.
+  useEffect(() => turnosHub.subscribe(() => void refetch()), [refetch])
 
   const openDetail = (turno: TurnoDto) => {
     const next = new URLSearchParams(searchParams)
