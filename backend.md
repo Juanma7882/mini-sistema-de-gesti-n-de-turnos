@@ -32,7 +32,9 @@ deploy/CI. Tareas de máx. ~2 h. El rol **Paciente** NO entra acá (ver
 
 - [ ] 3.1 `AppDbContext` con `DbSet` de las 5 entidades.
 - [ ] 3.2 Configuración EF por entidad: `Estado`/`Rol` como `int`, `Email` índice único, FKs, `DeletedAt` filtro de consulta global (soft delete) en Paciente/Profesional.
-- [ ] 3.3 Índice único parcial `UNIQUE (ProfesionalId, Inicio) WHERE Estado <> 2` vía `HasFilter(...)`.
+- [ ] 3.3 Dos índices únicos parciales vía `HasFilter(...)`:
+  - `UNIQUE (ProfesionalId, Inicio) WHERE Estado <> 2` — anti doble-turno (slot exacto).
+  - `UNIQUE (ProfesionalId, PacienteId) WHERE Estado < 2` — un paciente no puede tener 2+ turnos activos (`Pendiente`/`Confirmado`) con el mismo profesional.
 - [ ] 3.4 Migración inicial `Init`; verificar `dotnet ef database update` sobre base limpia crea el `.db` y el índice parcial.
 - [ ] 3.5 `ConnectionStrings__Default` desde config; registrar `AppDbContext` en DI.
 
@@ -82,6 +84,7 @@ implementa esas interfaces. Orden: A → B → (C ∥ E) → D → F.
 - [x] 5.19 `EditarAsync(id, TurnoRequest, ct)`: carga (404); **si `Estado` es `Cancelado` o `Atendido` → `ConflictException`** (turno cerrado: hay que sacar uno nuevo); revalida paciente/profesional; anti doble-turno excluyendo el propio `Id`; `UpdatedAt = IClock.UtcNow`.
 - [x] 5.20 `CambiarEstadoAsync(id, EstadoTurno, ct)`: carga (404, mismo criterio de ajeno que 5.17); `MaquinaEstados.EsTransicionValida(actual, nuevo)` — ambos roles disparan cualquier transición legal sobre sus propios turnos; transición ilegal → `ConflictException`; `UpdatedAt`.
 - [x] 5.21 Métodos de `ITurnoRepository`: `GetPagedAsync(TurnoFiltro, page, pageSize, ct)`, `GetByIdAsync(id, ct)` (con includes), `AddAsync`, `Update` (sync, sin I/O), `ExisteSlotAsync(profesionalId, inicio, int? excluirId, ct)`, `SaveChangesAsync(ct)`. La colisión de carrera se re-lanza como `ConflictException` desde `TurnoRepository` (captura `DbUpdateException` del índice único parcial).
+- [x] 5.21b Regla "1 turno activo por par `(profesional, paciente)`": método de repo `TienePacienteActivoConProfesionalAsync(profesionalId, pacienteId, int? excluirId, ct)` (`true` si hay un turno `Pendiente`/`Confirmado` de ese par); pre-chequeo en `CrearAsync` (`excluirId: null`) y `EditarAsync` (`excluirId: id`) → `ConflictException`. La carrera la corta el 2º índice único parcial de §3.3.
 
 ### 5.E AuthService (en `Application/Auth`)
 
@@ -98,6 +101,7 @@ implementa esas interfaces. Orden: A → B → (C ∥ E) → D → F.
 - [x] 5.29 `CambiarEstadoAsync`: matriz legal/ilegal (`Pendiente→Atendido` → 409, `Pendiente→Confirmado` → ok); Profesional sobre turno ajeno → `NotFoundException`.
 - [x] 5.30 `ListarAsync` como Profesional ignora `filtro.ProfesionalId`.
 - [x] 5.31 Auth: credenciales malas → `UnauthorizedException`; `RefreshAsync` rota y el token previo queda revocado.
+- [x] 5.32 Turno (regla 5.21b): `CrearAsync` con el par `(profesional, paciente)` ya activo → `ConflictException`; con turno previo `Cancelado`/`Atendido` del par → ok; `EditarAsync` no choca contra el propio turno.
 
 ## 6. Api — pipeline y auth
 

@@ -97,6 +97,14 @@ public sealed class InMemoryTurnoRepository : ITurnoRepository
             && t.Estado != EstadoTurno.Cancelado
             && t.Id != (excluirTurnoId ?? 0)));
 
+    public Task<bool> TienePacienteActivoConProfesionalAsync(
+        int profesionalId, int pacienteId, int? excluirTurnoId, CancellationToken ct) =>
+        Task.FromResult(_turnos.Any(t =>
+            t.ProfesionalId == profesionalId
+            && t.PacienteId == pacienteId
+            && (t.Estado == EstadoTurno.Pendiente || t.Estado == EstadoTurno.Confirmado)
+            && t.Id != (excluirTurnoId ?? 0)));
+
     public Task SaveChangesAsync(CancellationToken ct)
     {
         SaveChangesCount++;

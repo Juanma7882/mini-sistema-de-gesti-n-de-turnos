@@ -95,6 +95,31 @@ public class TurnoServiceTests
             .Should().ThrowAsync<ConflictException>();
     }
 
+    [Fact]
+    public async Task CrearAsync_ParProfesionalPacienteYaActivo_LanzaConflict()
+    {
+        var activo = TestData.Turno(1, 1, 10, Futuro, EstadoTurno.Confirmado);
+        var ctx = Construir(FakeCurrentUser.Admin(), turnos: activo);
+
+        // Otro horario, mismo (profesional, paciente): el slot está libre pero el par ya tiene un turno activo.
+        await ctx.Sut.Invoking(s => s.CrearAsync(Req(inicio: Futuro.AddHours(2)), Ct))
+            .Should().ThrowAsync<ConflictException>();
+    }
+
+    [Theory]
+    [InlineData(EstadoTurno.Cancelado)]
+    [InlineData(EstadoTurno.Atendido)]
+    public async Task CrearAsync_ParConSoloTurnosCerrados_Ok(EstadoTurno cerrado)
+    {
+        var previo = TestData.Turno(1, 1, 10, Futuro, cerrado);
+        var ctx = Construir(FakeCurrentUser.Admin(), turnos: previo);
+
+        var dto = await ctx.Sut.CrearAsync(Req(inicio: Futuro.AddHours(2)), Ct);
+
+        dto.Id.Should().NotBe(1);
+        dto.Estado.Should().Be(EstadoTurno.Pendiente);
+    }
+
     // ---- Editar ----
 
     [Theory]
@@ -128,6 +153,34 @@ public class TurnoServiceTests
 
         await ctx.Sut.Invoking(s => s.EditarAsync(42, Req(), Ct))
             .Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task EditarAsync_MismoParDelPropioTurno_NoChocaConLaReglaDeParActivo()
+    {
+        var turno = TestData.Turno(1, 1, 10, Futuro, EstadoTurno.Confirmado);
+        var ctx = Construir(FakeCurrentUser.Admin(), turnos: turno);
+
+        var dto = await ctx.Sut.EditarAsync(
+            1, Req(pacienteId: 1, profesionalId: 10, inicio: Futuro, notas: "misma pareja"), Ct);
+
+        dto.Notas.Should().Be("misma pareja");
+    }
+
+    [Fact]
+    public async Task EditarAsync_DejariaAlParConDosTurnosActivos_LanzaConflict()
+    {
+        var deLaOtra = TestData.Turno(1, 2, 10, Futuro, EstadoTurno.Pendiente);
+        var editable = TestData.Turno(2, 1, 10, Futuro.AddHours(1), EstadoTurno.Pendiente);
+        var ctx = Construir(
+            FakeCurrentUser.Admin(),
+            pacientes: [TestData.PacienteActivo(1), TestData.PacienteActivo(2)],
+            turnos: [deLaOtra, editable]);
+
+        // Reasignar el turno 2 al paciente 2, que ya tiene el turno 1 activo con el profesional 10.
+        await ctx.Sut.Invoking(s => s.EditarAsync(
+                2, Req(pacienteId: 2, profesionalId: 10, inicio: Futuro.AddHours(1)), Ct))
+            .Should().ThrowAsync<ConflictException>();
     }
 
     // ---- CambiarEstado ----

@@ -100,6 +100,11 @@ implementación viven en `backend.md` §2 (Domain) y §3 (Infrastructure).
   `HasIndex(t => new { t.ProfesionalId, t.Inicio }).IsUnique().HasFilter("\"Estado\" <> 2")`
   (2 = `Cancelado`). Es la garantía dura del anti doble-turno; la carrera entre dos
   escrituras la corta el índice → `DbUpdateException` → **409**.
+- `IX_Turnos_ProfesionalId_PacienteId_Activo` — **único parcial**:
+  `HasIndex(t => new { t.ProfesionalId, t.PacienteId }).IsUnique().HasFilter("\"Estado\" < 2")`
+  (0 = `Pendiente`, 1 = `Confirmado`). Un paciente no puede tener 2+ turnos **activos**
+  con el mismo profesional; los `Cancelado`/`Atendido` (2, 3) no cuentan. Pre-chequeo
+  en Application + este índice para la carrera → **409**.
 - `IX_Turnos_Inicio` — no único, para el filtro `desde`/`hasta` de `GET /turnos`.
 - `IX_Turnos_PacienteId` — no único (lo crea EF por la FK; explicitarlo no cuesta).
 
@@ -161,6 +166,8 @@ public void Configure(EntityTypeBuilder<Turno> b)
 
     b.HasIndex(t => new { t.ProfesionalId, t.Inicio })
         .IsUnique().HasFilter("\"Estado\" <> 2");
+    b.HasIndex(t => new { t.ProfesionalId, t.PacienteId })
+        .IsUnique().HasFilter("\"Estado\" < 2");
     b.HasIndex(t => t.Inicio);
 }
 ```
@@ -222,7 +229,8 @@ dotnet ef database update -p src/Infrastructure -s src/Api
 **Verificar en el migration generado / en el `.db`:**
 
 1. `CREATE UNIQUE INDEX "IX_Turnos_ProfesionalId_Inicio" ... WHERE "Estado" <> 2`
-   (el índice parcial tiene que salir con el `WHERE`).
+   y `CREATE UNIQUE INDEX "IX_Turnos_ProfesionalId_PacienteId" ... WHERE "Estado" < 2`
+   (los dos índices parciales tienen que salir con su `WHERE`).
 2. `CREATE UNIQUE INDEX "IX_Usuarios_Email"` y `"IX_RefreshTokens_TokenHash"`.
 3. Las columnas enum (`Estado`, `Rol`) son `INTEGER`.
 4. `PRAGMA foreign_keys = ON` está activo (SQLite lo requiere por conexión; EF Core
@@ -236,6 +244,7 @@ dotnet ef database update -p src/Infrastructure -s src/Api
 |---|---|---|---|
 | `Usuarios` | `Email` | sí | — |
 | `Turnos` | `(ProfesionalId, Inicio)` | sí | `"Estado" <> 2` |
+| `Turnos` | `(ProfesionalId, PacienteId)` | sí | `"Estado" < 2` |
 | `Turnos` | `Inicio` | no | — |
 | `Turnos` | `PacienteId` | no | — (FK) |
 | `Turnos` | `ProfesionalId` | no | — (FK, cubierto por el compuesto) |

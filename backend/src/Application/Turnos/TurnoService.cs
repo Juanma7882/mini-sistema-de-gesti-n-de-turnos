@@ -50,6 +50,8 @@ public sealed class TurnoService(
         await GarantizarPacienteActivoAsync(request.PacienteId, ct);
         await GarantizarProfesionalActivoAsync(request.ProfesionalId, ct);
         await GarantizarSlotLibreAsync(request.ProfesionalId, request.Inicio, excluirTurnoId: null, ct);
+        await GarantizarPacienteSinTurnoActivoAsync(
+            request.ProfesionalId, request.PacienteId, excluirTurnoId: null, ct);
 
         var ahora = clock.UtcNow;
         var turno = new Turno
@@ -85,6 +87,8 @@ public sealed class TurnoService(
         await GarantizarPacienteActivoAsync(request.PacienteId, ct);
         await GarantizarProfesionalActivoAsync(request.ProfesionalId, ct);
         await GarantizarSlotLibreAsync(request.ProfesionalId, request.Inicio, excluirTurnoId: id, ct);
+        await GarantizarPacienteSinTurnoActivoAsync(
+            request.ProfesionalId, request.PacienteId, excluirTurnoId: id, ct);
 
         turno.PacienteId = request.PacienteId;
         turno.ProfesionalId = request.ProfesionalId;
@@ -162,6 +166,17 @@ public sealed class TurnoService(
         {
             throw new ConflictException(
                 $"El profesional ya tiene un turno el {inicio:yyyy-MM-dd} a las {inicio:HH:mm}.");
+        }
+    }
+
+    private async Task GarantizarPacienteSinTurnoActivoAsync(
+        int profesionalId, int pacienteId, int? excluirTurnoId, CancellationToken ct)
+    {
+        if (await turnos.TienePacienteActivoConProfesionalAsync(
+                profesionalId, pacienteId, excluirTurnoId, ct))
+        {
+            throw new ConflictException(
+                "El paciente ya tiene un turno activo con ese profesional.");
         }
     }
 

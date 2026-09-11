@@ -28,6 +28,13 @@ public interface ITurnoRepository
     Task<bool> ExisteSlotAsync(
         int profesionalId, DateTime inicio, int? excluirTurnoId, CancellationToken ct);
 
+    /// <summary>Ese paciente ya tiene un turno <c>Pendiente</c> o
+    /// <c>Confirmado</c> con ese profesional. <paramref name="excluirTurnoId"/>
+    /// se ignora a sí mismo al editar. Lo respalda el índice único parcial
+    /// <c>(ProfesionalId, PacienteId) WHERE Estado &lt; 2</c>.</summary>
+    Task<bool> TienePacienteActivoConProfesionalAsync(
+        int profesionalId, int pacienteId, int? excluirTurnoId, CancellationToken ct);
+
     /// <summary>Persiste. Traduce la violación del índice único parcial
     /// <c>(ProfesionalId, Inicio) WHERE Estado &lt;&gt; Cancelado</c> a
     /// <c>ConflictException</c> (carrera entre el chequeo y el insert).</summary>
