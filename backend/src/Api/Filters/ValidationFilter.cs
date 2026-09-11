@@ -34,8 +34,9 @@ internal sealed class ValidationFilter : IAsyncActionFilter
                 .ToArray();
         }
 
-        foreach (var argumento in context.ActionArguments.Values)
+        foreach (var kv in context.ActionArguments)
         {
+            var argumento = kv.Value;
             if (argumento is null)
             {
                 continue;
@@ -52,7 +53,13 @@ internal sealed class ValidationFilter : IAsyncActionFilter
 
             foreach (var grupo in resultado.Errors.GroupBy(e => e.PropertyName))
             {
-                errores[grupo.Key] = grupo.Select(e => e.ErrorMessage).ToArray();
+                var propertyKey = string.IsNullOrEmpty(grupo.Key) ? kv.Key : $"{kv.Key}.{grupo.Key}";
+                var messages = grupo.Select(e => e.ErrorMessage).ToArray();
+
+                if (errores.TryGetValue(propertyKey, out var existing))
+                    errores[propertyKey] = existing.Concat(messages).ToArray();
+                else
+                    errores[propertyKey] = messages;
             }
         }
 
