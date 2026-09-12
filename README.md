@@ -21,7 +21,7 @@ turnos, con dos tipos de usuario (Administrador y Profesional).
 | **Sistema desplegado**    | Frontend: [gestion-turnos-rho.vercel.app](https://gestion-turnos-rho.vercel.app/) · Backend: [Railway](https://mini-sistema-de-gesti-n-de-turnos-production.up.railway.app) ([`/health`](https://mini-sistema-de-gesti-n-de-turnos-production.up.railway.app/health)) |
 | **Repositorio**           | Este mismo repo — código fuente, historial de commits, este README                    |
 | **Diagrama de arquitectura** | [gitdiagram.com/Juanma7882/mini-sistema-de-gesti-n-de-turnos](https://gitdiagram.com/Juanma7882/mini-sistema-de-gesti-n-de-turnos) |
-| **Video demostrativo**    | `<link a Drive / YouTube no listado / Loom — completar>`                              |
+| **Video demostrativo**    | [Ver en Google Drive](https://drive.google.com/file/d/1-rRDr_eMJ2oms3cp8eXwu-2h_WIli41X/view?usp=sharing) |
 | **Credenciales de prueba** | Ver [Credenciales de prueba](#credenciales-de-prueba)                                |
 | **Tecnologías utilizadas** | Ver [Stack](#stack)                                                                   |
 | **Decisiones técnicas**   | Ver [Decisiones técnicas (resumen)](#decisiones-técnicas-resumen) — detalle en [`docs/decisiones-tecnicas.md`](docs/decisiones-tecnicas.md) |
