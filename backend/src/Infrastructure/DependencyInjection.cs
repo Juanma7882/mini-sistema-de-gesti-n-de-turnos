@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,6 +21,8 @@ public static class DependencyInjection
     {
         var connectionString = configuration.GetConnectionString("Default")
             ?? "Data Source=turnos.db";
+
+        EnsureSqliteDirectoryExists(connectionString);
 
         services.AddDbContext<AppDbContext>(options => options.UseSqlite(connectionString));
 
@@ -56,5 +59,21 @@ public static class DependencyInjection
 
         var seeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
         await seeder.SeedAsync(ct);
+    }
+
+    /// <summary>SQLite crea el archivo de base de datos pero no su directorio
+    /// padre; en Railway ese directorio es un volumen montado que puede no
+    /// existir todavía si el mount path quedó mal configurado, así que lo
+    /// creamos igual como defensa (no reemplaza tener el volumen bien montado
+    /// para persistencia real).</summary>
+    private static void EnsureSqliteDirectoryExists(string connectionString)
+    {
+        var dataSource = new SqliteConnectionStringBuilder(connectionString).DataSource;
+        var directory = Path.GetDirectoryName(Path.GetFullPath(dataSource));
+
+        if (!string.IsNullOrEmpty(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
     }
 }
