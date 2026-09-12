@@ -133,12 +133,12 @@ Se siembran automáticamente al arrancar si la base está vacía.
 
 | Rol           | Email                       | Password                                                       |
 | ------------- | --------------------------- | --------------------------------------------------------------- |
-| Administrador | `admin@clinica.test`        | `Admin123*` (o el valor de `Seed__AdminPassword`, si está seteada) |
-| Profesional   | `dra.gomez@clinica.test`    | `Profesional123*` (o el valor de `Seed__ProfessionalPassword`)  |
-| Profesional   | `dr.fernandez@clinica.test` | `Profesional123*` (o el valor de `Seed__ProfessionalPassword`)  |
-| Profesional   | `dra.ruiz@clinica.test`     | `Profesional123*` (o el valor de `Seed__ProfessionalPassword`)  |
+| Administrador | `admin@clinica.test`        | `Admin1234` (o el valor de `Seed__AdminPassword`, si está seteada) |
+| Profesional   | `dra.gomez@clinica.test`    | `Profesional1234` (o el valor de `Seed__ProfessionalPassword`)  |
+| Profesional   | `dr.fernandez@clinica.test` | `Profesional1234` (o el valor de `Seed__ProfessionalPassword`)  |
+| Profesional   | `dra.ruiz@clinica.test`     | `Profesional1234` (o el valor de `Seed__ProfessionalPassword`)  |
 
-`Admin123*` / `Profesional123*` son los defaults que usa el seed
+`Admin1234` / `Profesional1234` son los defaults que usa el seed
 (`DbSeeder`) cuando `Seed__AdminPassword` / `Seed__ProfessionalPassword` no
 están seteadas — sirven para correr y probar el proyecto en local sin
 configurar nada extra. **En el despliegue público (Railway) esas dos

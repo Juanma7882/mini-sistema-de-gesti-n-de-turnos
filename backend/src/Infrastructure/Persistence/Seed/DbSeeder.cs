@@ -18,8 +18,8 @@ internal sealed class DbSeeder(
     IClock clock,
     IOptions<SeedOptions> seedOptions)
 {
-    private const string AdminPasswordFallback = "Admin123*";
-    private const string ProfesionalPasswordFallback = "Profesional123*";
+    private const string AdminPasswordFallback = "Admin1234";
+    private const string ProfesionalPasswordFallback = "Profesional1234";
 
     public async Task SeedAsync(CancellationToken ct = default)
     {
