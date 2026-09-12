@@ -80,8 +80,8 @@ export function TurnoDialog({ open, turno, onClose, onSaved }: TurnoDialogProps)
       setHora(h)
       setPacienteSearch(`${turno.paciente.nombre} ${turno.paciente.apellido}`)
       reset({
-        pacienteId: turno.paciente.id,
-        profesionalId: turno.profesional.id,
+        pacienteId: String(turno.paciente.id),
+        profesionalId: String(turno.profesional.id),
         inicio: turno.inicio,
         notas: turno.notas ?? '',
       })
@@ -113,11 +113,16 @@ export function TurnoDialog({ open, turno, onClose, onSaved }: TurnoDialogProps)
 
   const onSubmit = handleSubmit(async (values) => {
     setFormError(null)
+    const input = {
+      ...values,
+      pacienteId: Number(values.pacienteId),
+      profesionalId: Number(values.profesionalId),
+    }
     try {
       if (turno) {
-        await turnosApi.editar(turno.id, values)
+        await turnosApi.editar(turno.id, input)
       } else {
-        await turnosApi.crear(values)
+        await turnosApi.crear(input)
       }
       onSaved()
     } catch (err) {
@@ -196,10 +201,10 @@ export function TurnoDialog({ open, turno, onClose, onSaved }: TurnoDialogProps)
                   <li
                     key={p.id}
                     role="option"
-                    aria-selected={p.id === pacienteId}
+                    aria-selected={String(p.id) === pacienteId}
                     onMouseDown={(e) => {
                       e.preventDefault()
-                      setValue('pacienteId', p.id, { shouldValidate: true })
+                      setValue('pacienteId', String(p.id), { shouldValidate: true })
                       setPacienteSearch(`${p.nombre} ${p.apellido}`)
                       setPacienteDropdownOpen(false)
                     }}

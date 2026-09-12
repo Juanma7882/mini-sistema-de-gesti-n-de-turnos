@@ -15,8 +15,8 @@ export interface TurnosQuery {
 }
 
 export interface TurnoInput {
-  pacienteId: string
-  profesionalId: string
+  pacienteId: number
+  profesionalId: number
   inicio: string
   notas?: string
 }
