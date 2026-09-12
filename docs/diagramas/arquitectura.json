@@ -1,0 +1,285 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Mini sistema de gestión de turnos — arquitectura",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "camino-request",
+        "label": "Camino de un request",
+        "focus": [
+          "navegador",
+          "spa",
+          "api",
+          "application",
+          "infra",
+          "db"
+        ],
+        "note": "Del navegador al archivo SQLite, atravesando las cuatro capas del backend."
+      },
+      {
+        "id": "seguridad",
+        "label": "Autenticación y permisos",
+        "focus": [
+          "spa",
+          "auth",
+          "api"
+        ],
+        "note": "Dónde se verifica el token firmado y se aplica la compuerta por rol."
+      },
+      {
+        "id": "tiempo-real",
+        "label": "Tiempo real",
+        "focus": [
+          "application",
+          "hub",
+          "spa"
+        ],
+        "note": "El push por WebSocket que corre en paralelo al REST."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "navegador",
+      "type": "external",
+      "label": "Navegador",
+      "sublabel": "Admin · Profesional",
+      "pos": [
+        40,
+        320
+      ],
+      "size": [
+        130,
+        64
+      ]
+    },
+    {
+      "id": "spa",
+      "type": "frontend",
+      "label": "React SPA",
+      "sublabel": "Vite + TS · Tailwind v4",
+      "pos": [
+        250,
+        320
+      ],
+      "size": [
+        150,
+        64
+      ],
+      "brand": "react",
+      "tag": "Vercel"
+    },
+    {
+      "id": "auth",
+      "type": "security",
+      "label": "Auth",
+      "sublabel": "JWT HS256 · BCrypt",
+      "pos": [
+        500,
+        160
+      ],
+      "size": [
+        150,
+        64
+      ],
+      "tag": "refresh rotado"
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "Turnos.Api",
+      "sublabel": "controllers · pipeline",
+      "pos": [
+        500,
+        320
+      ],
+      "size": [
+        150,
+        64
+      ],
+      "brand": "dotnet"
+    },
+    {
+      "id": "domain",
+      "type": "backend",
+      "label": "Domain",
+      "sublabel": "entidades · MaquinaEstados",
+      "pos": [
+        750,
+        160
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "application",
+      "type": "backend",
+      "label": "Application",
+      "sublabel": "casos de uso · validación",
+      "pos": [
+        750,
+        320
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "infra",
+      "type": "backend",
+      "label": "Infrastructure",
+      "sublabel": "EF Core · repos · tokens",
+      "pos": [
+        1000,
+        320
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "db",
+      "type": "database",
+      "label": "SQLite",
+      "sublabel": "turnos.db en volume",
+      "pos": [
+        1000,
+        480
+      ],
+      "size": [
+        150,
+        64
+      ],
+      "brand": "sqlite"
+    },
+    {
+      "id": "hub",
+      "type": "messagebus",
+      "label": "TurnoHub",
+      "sublabel": "SignalR /hubs/turnos",
+      "pos": [
+        500,
+        480
+      ],
+      "size": [
+        150,
+        64
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Vercel",
+      "wraps": [
+        "spa"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Railway — contenedor Docker",
+      "wraps": [
+        "auth",
+        "api",
+        "domain",
+        "application",
+        "infra",
+        "db",
+        "hub"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "usuario-abre-app",
+      "from": "navegador",
+      "to": "spa",
+      "label": "HTTPS"
+    },
+    {
+      "id": "rest-con-bearer",
+      "from": "spa",
+      "to": "api",
+      "label": "REST /api · Bearer",
+      "variant": "emphasis"
+    },
+    {
+      "id": "verifica-token",
+      "from": "auth",
+      "to": "api",
+      "label": "valida firma y rol",
+      "variant": "security",
+      "labelDy": 24
+    },
+    {
+      "id": "api-a-caso-de-uso",
+      "from": "api",
+      "to": "application",
+      "label": "caso de uso"
+    },
+    {
+      "id": "reglas-de-dominio",
+      "from": "application",
+      "to": "domain",
+      "label": "reglas puras"
+    },
+    {
+      "id": "puertos",
+      "from": "application",
+      "to": "infra",
+      "label": "interfaces"
+    },
+    {
+      "id": "persistencia",
+      "from": "infra",
+      "to": "db",
+      "label": "EF Core",
+      "labelDy": 24
+    },
+    {
+      "id": "notifica-cambio",
+      "from": "application",
+      "to": "hub",
+      "label": "ITurnoNotifier"
+    },
+    {
+      "id": "push-al-cliente",
+      "from": "hub",
+      "to": "spa",
+      "label": "turnoCambiado",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Backend en capas",
+      "items": [
+        "Api → Application → Domain, con Infrastructure detrás de interfaces",
+        "xUnit: dominio, servicios, índices reales e integración HTTP"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Seguridad",
+      "items": [
+        "Access token JWT de 15 min, refresh de 14 días con rotación revoke-on-use",
+        "BCrypt para passwords y rate limit de 5 intentos por IP cada 60s en /auth/login"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Datos y tiempo real",
+      "items": [
+        "Índices únicos parciales que cortan el doble turno en la base misma",
+        "SignalR emite a los grupos admins y profesional-{id}"
+      ]
+    }
+  ]
+}

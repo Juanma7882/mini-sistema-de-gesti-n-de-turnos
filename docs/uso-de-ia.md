@@ -1,5 +1,19 @@
 # Uso de IA
 
+Este documento cubre primero el **backend** y después el **frontend** — ambos
+se construyeron con la misma herramienta y el mismo ritmo de trabajo, resumido
+en cada sección: **planificar → explorar → iterar → implementar**.
+
+Los `.md` de `docs/` (`backend.md`, `frontend.md` y el resto) funcionaron
+como *baseline* del proyecto: ahí se dejaba escrito, antes de programar, qué
+había que hacer en cada tarea. Tenerlo organizado así permitió después
+usarlos como checklist — revisar que cada tarea estuviera bien resuelta sin
+desviarse del plan original.
+
+---
+
+# Backend
+
 ## Herramienta
 
 Claude Code (Sonnet 5), como agente dentro del editor — no autocompletado
@@ -105,3 +119,65 @@ La propuesta `unify-usuario-profesional` se evaluó primero como riesgosa tan
 cerca del deadline y se pensó implementar solo su parte más chica; más
 adelante, dentro del mismo plazo, se reconsideró y se implementó completa
 (ver `openspec/changes/archive/2026-09-11-unify-usuario-profesional/`).
+
+---
+
+# Frontend
+
+## Herramienta
+
+Claude Code (Sonnet 5), como agente dentro del editor — el mismo enfoque que
+el backend: implementación completa guiada por [`frontend.md`](../frontend.md)
+como lista de tareas viva, no autocompletado puntual.
+
+## Cómo se trabajó
+
+Mismo ritmo que en el backend, adaptado a cada bloque del frontend (§1
+scaffolding, §2 cliente HTTP y sesión, §3 login y guards, §4 layout y
+navegación, §5-6 turnos, §7-8 pacientes/profesionales, §9 pulido y errores):
+
+1. **Plan** — se dejaba por escrito en `frontend.md` qué se iba a construir y
+   las decisiones de diseño no obvias (ej. anillos `app/core/shared/features`,
+   componentes propios sobre Tailwind en vez de `shadcn/ui`, dónde vive el
+   estado de sesión).
+2. **Implementación** — código siguiendo la convención ya establecida en el
+   repo (imports relativos, un feature por entidad, hooks `use<X>Query` sobre
+   `httpClient`).
+3. **Verificación real, no solo lectura** — cada pantalla se probó en el
+   navegador contra el backend corriendo local: login con ambos roles,
+   gating de menú/rutas por rol, CRUD completo de cada entidad, el error 409
+   de turno duplicado mostrado inline, y los eventos de SignalR llegando en
+   vivo a otra pestaña abierta con el otro rol.
+4. **Tests automatizados** donde tenía sentido (ej. la máquina de estados del
+   turno en el frontend, que replica las transiciones legales del backend).
+
+## Qué se revisó y corrigió
+
+Igual que en el backend, la supervisión estuvo en probar la app real, no solo
+leer el código generado:
+
+- **Gating por rol es solo UX, nunca la fuente de verdad.** Se revisó
+  explícitamente que ocultar botones/rutas en el frontend no reemplace la
+  verificación del backend — un profesional pegándole a un endpoint de admin
+  por URL directa tiene que seguir recibiendo 403/404 del servidor, no solo
+  no ver el botón.
+- **Hidratación al arrancar (F5).** El primer intento mostraba un flash de
+  login antes de confirmar la sesión; se corrigió a que la app dispare
+  `POST /auth/refresh` con la cookie antes de decidir qué pantalla mostrar
+  (ver [Autenticación y permisos](../README.md#autenticación-y-permisos) en
+  el README).
+- **Qué guarda `localStorage`.** Se revisó a propósito que solo quedara un
+  snapshot no sensible (`{ nombre, role }`) para pintar el menú al instante,
+  nunca el token — el access token vive solo en memoria.
+- **Estilos.** A diferencia del backend (donde el criterio de "anduvo" es un
+  status code), en el frontend varias veces hubo que iterar sobre el CSS
+  hasta que la UI se viera y funcionara correctamente en el navegador — un
+  cambio que se leía bien en el código no siempre se veía bien renderizado.
+
+## Supervisión humana
+
+Las decisiones de diseño visual y de librerías (paleta, tipografía, descartar
+`shadcn/ui` a favor de componentes propios sobre Tailwind, qué pantallas
+entraban en el alcance de esta entrega) se definieron explícitamente antes de
+implementar, con el mismo patrón planificar → confirmar → implementar que en
+el backend — no las tomó la IA por su cuenta.

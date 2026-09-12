@@ -3,19 +3,40 @@
 Aplicación para gestionar los turnos de una clínica: pacientes, profesionales y
 turnos, con dos tipos de usuario (Administrador y Profesional).
 
-> **Estado:** backend completo (capas, auth, endpoints, tests de integración,
-> Dockerfile y CI) y desplegable — solo falta cargar la instancia en Railway
-> (ver [`docs/backend.md`](docs/backend.md) §11.3). El frontend cubre el flujo
-> funcional completo de las tres entidades; el detalle de qué falta pulir vive
-> en [`docs/frontend.md`](docs/frontend.md).
+> **Estado:** desplegado y funcionando — backend en Railway
+> ([`/health`](https://mini-sistema-de-gesti-n-de-turnos-production.up.railway.app/health))
+> y frontend en [Vercel](https://gestion-turnos-rho.vercel.app/). Backend
+> completo (capas, auth, endpoints, tests de integración, Dockerfile y CI); el
+> frontend cubre el flujo funcional completo de las tres entidades — el
+> detalle de qué falta pulir vive en [`docs/frontend.md`](docs/frontend.md).
+
+---
+
+## Entrega
+
+[↑ volver al índice](#índice)
+
+| Qué                       | Dónde                                                                                |
+| ------------------------- | ------------------------------------------------------------------------------------- |
+| **Sistema desplegado**    | Frontend: [gestion-turnos-rho.vercel.app](https://gestion-turnos-rho.vercel.app/) · Backend: [Railway](https://mini-sistema-de-gesti-n-de-turnos-production.up.railway.app) ([`/health`](https://mini-sistema-de-gesti-n-de-turnos-production.up.railway.app/health)) |
+| **Repositorio**           | Este mismo repo — código fuente, historial de commits, este README                    |
+| **Diagrama de arquitectura** | [gitdiagram.com/Juanma7882/mini-sistema-de-gesti-n-de-turnos](https://gitdiagram.com/Juanma7882/mini-sistema-de-gesti-n-de-turnos) |
+| **Video demostrativo**    | `<link a Drive / YouTube no listado / Loom — completar>`                              |
+| **Credenciales de prueba** | Ver [Credenciales de prueba](#credenciales-de-prueba)                                |
+| **Tecnologías utilizadas** | Ver [Stack](#stack)                                                                   |
+| **Decisiones técnicas**   | Ver [Decisiones técnicas (resumen)](#decisiones-técnicas-resumen) — detalle en [`docs/decisiones-tecnicas.md`](docs/decisiones-tecnicas.md) |
+| **Uso de IA**             | Ver [Uso de inteligencia artificial (resumen)](#uso-de-inteligencia-artificial-resumen) — detalle en [`docs/uso-de-ia.md`](docs/uso-de-ia.md) |
+| **Mejoras futuras**       | Ver [Mejoras futuras (resumen)](#mejoras-futuras-resumen) — detalle en [`docs/mejoras-futuras.md`](docs/mejoras-futuras.md) |
 
 ---
 
 ## Índice
 
-[Stack](#stack) · [Cómo correr localmente](#cómo-correr-el-proyecto-localmente) ·
+[Entrega](#entrega) · [Stack](#stack) · [Cómo correr localmente](#cómo-correr-el-proyecto-localmente) ·
 [Variables de entorno](#variables-de-entorno) · [Credenciales de prueba](#credenciales-de-prueba) ·
-[Modelo de datos](#modelo-de-datos) · [API](#api) · [Auth y permisos](#autenticación-y-permisos) ·
+[Decisiones técnicas](#decisiones-técnicas-resumen) · [Uso de IA](#uso-de-inteligencia-artificial-resumen) ·
+[Mejoras futuras](#mejoras-futuras-resumen) · [Modelo de datos](#modelo-de-datos) ·
+[API](#api) · [Auth y permisos](#autenticación-y-permisos) ·
 [Tiempo real](#tiempo-real-signalr) · [Máquina de estados](#máquina-de-estados-del-turno) ·
 [Flujos de uso](#flujos-de-uso) · [Validaciones](#validaciones-principales) ·
 [Estructura](#estructura-del-proyecto) · [Más documentación](#más-documentación)
@@ -23,6 +44,8 @@ turnos, con dos tipos de usuario (Administrador y Profesional).
 ---
 
 ## Stack
+
+[↑ volver al índice](#índice)
 
 | Capa          | Tecnología                                                                                              |
 | ------------- | ------------------------------------------------------------------------------------------------------- |
@@ -38,6 +61,8 @@ turnos, con dos tipos de usuario (Administrador y Profesional).
 ---
 
 ## Cómo correr el proyecto localmente
+
+[↑ volver al índice](#índice)
 
 ```bash
 # Backend
@@ -71,6 +96,8 @@ Swagger queda disponible en `http://localhost:5125/swagger` (solo en
 
 ## Variables de entorno
 
+[↑ volver al índice](#índice)
+
 ### Backend (`backend/src/Api`)
 
 | Variable                     | Descripción                                           | Ejemplo                         |
@@ -81,7 +108,7 @@ Swagger queda disponible en `http://localhost:5125/swagger` (solo en
 | `Jwt__Audience`              | Audiencia del token                                   | `mae-turnos-web`                |
 | `Jwt__AccessMinutes`         | Vida del access token                                 | `15`                            |
 | `Jwt__RefreshDays`           | Vida del refresh token                                | `14`                            |
-| `Cors__AllowedOrigins`       | Orígenes permitidos (URL del frontend)                | `https://mae-turnos.vercel.app` |
+| `Cors__AllowedOrigins`       | Orígenes permitidos (URL del frontend)                | `https://gestion-turnos-rho.vercel.app` |
 | `Seed__AdminPassword`        | Password del usuario admin sembrado                   | _(secreto)_                     |
 | `Seed__ProfessionalPassword` | Password del usuario profesional sembrado             | _(secreto)_                     |
 
@@ -89,7 +116,7 @@ Swagger queda disponible en `http://localhost:5125/swagger` (solo en
 
 | Variable             | Descripción                                          | Ejemplo                                 |
 | -------------------- | ---------------------------------------------------- | --------------------------------------- |
-| `VITE_API_URL`       | URL base de la API                                   | `https://mae-turnos.up.railway.app/api` |
+| `VITE_API_URL`       | URL base de la API                                   | `https://mini-sistema-de-gesti-n-de-turnos-production.up.railway.app/api` |
 | `VITE_DEMO_EMAIL`    | Opcional, solo dev: prellena el email del login      | `admin@clinica.test`                    |
 | `VITE_DEMO_PASSWORD` | Opcional, solo dev: prellena la contraseña del login | _(secreto local)_                       |
 
@@ -100,20 +127,151 @@ Swagger queda disponible en `http://localhost:5125/swagger` (solo en
 
 ## Credenciales de prueba
 
+[↑ volver al índice](#índice)
+
 Se siembran automáticamente al arrancar si la base está vacía.
 
-| Rol           | Email                       | Password                              |
-| ------------- | --------------------------- | ------------------------------------- |
-| Administrador | `admin@clinica.test`        | valor de `Seed__AdminPassword`        |
-| Profesional   | `dra.gomez@clinica.test`    | valor de `Seed__ProfessionalPassword` |
-| Profesional   | `dr.fernandez@clinica.test` | valor de `Seed__ProfessionalPassword` |
-| Profesional   | `dra.ruiz@clinica.test`     | valor de `Seed__ProfessionalPassword` |
+| Rol           | Email                       | Password                                                       |
+| ------------- | --------------------------- | --------------------------------------------------------------- |
+| Administrador | `admin@clinica.test`        | `Admin123*` (o el valor de `Seed__AdminPassword`, si está seteada) |
+| Profesional   | `dra.gomez@clinica.test`    | `Profesional123*` (o el valor de `Seed__ProfessionalPassword`)  |
+| Profesional   | `dr.fernandez@clinica.test` | `Profesional123*` (o el valor de `Seed__ProfessionalPassword`)  |
+| Profesional   | `dra.ruiz@clinica.test`     | `Profesional123*` (o el valor de `Seed__ProfessionalPassword`)  |
+
+`Admin123*` / `Profesional123*` son los defaults que usa el seed
+(`DbSeeder`) cuando `Seed__AdminPassword` / `Seed__ProfessionalPassword` no
+están seteadas — sirven para correr y probar el proyecto en local sin
+configurar nada extra. **En el despliegue público (Railway) esas dos
+variables están seteadas a valores propios**, distintos de estos defaults,
+justamente porque el fallback queda visible en el código fuente del repo.
 
 Todos los pacientes, profesionales y turnos de ejemplo son **ficticios**.
 
 ---
 
+## Decisiones técnicas (resumen)
+
+[↑ volver al índice](#índice)
+
+### Por qué estas tecnologías
+
+- **Backend: ASP.NET Core / .NET 9.** Tipado fuerte, EF Core para migraciones
+  y tests de integración contra SQLite real, y Swagger/OpenAPI sin librerías
+  extra para que un evaluador pueda probar la API sin Postman.
+- **Frontend: React + TypeScript (Vite) + Tailwind v4.** Es una SPA
+  autenticada (sin necesidad de SSR ni SEO): Vite da un dev loop rápido y un
+  build estático simple de desplegar en Vercel. Tailwind evita mantener una
+  librería de componentes de terceros para el volumen de UI de esta prueba.
+- **Base de datos: SQLite + EF Core.** Elegida por el tamaño del proyecto:
+  al ser una prueba técnica de alcance acotado (una sola clínica), no se
+  justifica levantar un servidor de base de datos propio — SQLite vive como
+  un archivo dentro del mismo contenedor del backend, lo que evita problemas
+  de despliegue (no hay que provisionar, conectar ni mantener un servicio de
+  base aparte). Al usar EF Core, migrar a Postgres el día de mañana es
+  cambiar el provider y el connection string, no el código de dominio (ver
+  [Mejoras futuras](#mejoras-futuras-resumen)).
+
+### Cómo se organizó el proyecto
+
+Backend en capas (Domain → Application → Infrastructure → Api, un
+repositorio por agregado) y frontend en anillos (`app` → `features` →
+`shared`/`core`) — ver [Estructura del proyecto](#estructura-del-proyecto)
+arriba. El razonamiento detallado de cada decisión de layout está en
+[`docs/arquitectura-backend.md`](docs/arquitectura-backend.md) y
+[`docs/arquitectura-frontend.md`](docs/arquitectura-frontend.md).
+
+### Cómo se implementaron usuarios y permisos
+
+Dos roles (`Admin`/`Profesional`) resueltos por claims firmados en el JWT,
+verificados en el servidor en cada request — nunca en el cliente. Detalle
+completo en [Autenticación y permisos](#autenticación-y-permisos).
+
+### Cómo se evitó que un profesional tenga dos turnos en el mismo horario
+
+Doble garantía: un pre-chequeo en la capa Application (feedback rápido) más
+un índice único parcial en SQLite (`(ProfesionalId, Inicio) WHERE Estado <>
+Cancelado`) que corta la carrera real entre dos escrituras concurrentes.
+Detalle en [Validaciones principales](#validaciones-principales).
+
+### Validaciones y seguridad básica
+
+FluentValidation por request + `ValidationFilter` global, `ProblemDetails`
+(RFC 7807) para todos los errores, contraseñas con BCrypt, refresh token
+rotado y hasheado en base, y rate limit en `/auth/login` (5 intentos/60s por
+IP) contra fuerza bruta. Detalle completo en
+[Validaciones principales](#validaciones-principales) y
+[Autenticación y permisos](#autenticación-y-permisos).
+
+> Justificación línea por línea de cada decisión no obvia (por qué JWT
+> propio y no Identity, por qué controllers y no minimal APIs, etc.) en
+> [`docs/decisiones-tecnicas.md`](docs/decisiones-tecnicas.md).
+
+---
+
+## Uso de inteligencia artificial (resumen)
+
+[↑ volver al índice](#índice)
+
+- **Herramienta:** Claude Code (Sonnet 5), como agente dentro del editor —
+  implementación guiada, no autocompletado puntual.
+- **Dónde se usó:** todo el proyecto — la IA escribió el código tanto del
+  backend como del frontend (capas, auth, endpoints, tests de integración,
+  Dockerfile, CI en el backend; scaffolding, auth/guards, CRUD de las tres
+  entidades, realtime SignalR y pulido en el frontend).
+- **Prompts principales:** planificar, explorar, iterar e implementar, en ese
+  orden, repetido en cada bloque de trabajo tanto en frontend como en
+  backend. Los distintos `.md` de `docs/` se usaron como *baseline* del
+  proyecto — ahí se definía primero qué había que hacer en cada tarea, y
+  tenerlo organizado permitió usarlos después como checklist: revisar que
+  cada tarea estuviera bien resuelta sin desviarse del plan.
+- **Qué se revisó y corrigió:** por cada tarea implementada se revisaba el
+  resultado con tests automatizados y probando la funcionalidad a mano,
+  buscando bugs activamente (no solo leyendo el código generado). En el
+  frontend en particular, varias veces hubo que iterar sobre los estilos
+  hasta que la UI funcionara correctamente. Ejemplos concretos en
+  [`docs/uso-de-ia.md`](docs/uso-de-ia.md).
+- **Qué se decidió personalmente:** todo el diseño (arquitectura, UI,
+  decisiones con más de una opción razonable — JWT propio vs. Identity,
+  exponer Swagger en la URL pública de Railway, descartar `shadcn/ui`, qué
+  quedaba fuera de alcance) fue definido por el desarrollador; la IA apoyaba
+  explorando posibles caminos y escribiendo el código de lo que luego se
+  decidía implementar, nunca tomando esas decisiones por su cuenta.
+
+> Prompts principales y detalle completo en
+> [`docs/uso-de-ia.md`](docs/uso-de-ia.md).
+
+---
+
+## Mejoras futuras (resumen)
+
+[↑ volver al índice](#índice)
+
+**De las funcionalidades pedidas en la consigna, ninguna quedó pendiente** —
+todas están implementadas y funcionando. Lo que sigue son mejoras adicionales,
+deliberadamente fuera de alcance para este plazo (con el motivo de cada
+decisión en el documento completo):
+
+- **Seguridad:** detección de reuso de refresh token, lockout por cuenta
+  (hoy solo hay rate limit por IP).
+- **Datos:** catálogo con FK para `Especialidad`/`ObraSocial` (hoy texto
+  libre normalizado), revertir un turno terminal con auditoría, paginación
+  cursor-based.
+- **Frontend:** limpiar `shared/components/ui/` (residuo de un `shadcn/ui`
+  descartado), una librería de data-fetching (TanStack Query) si crece el
+  número de pantallas.
+- **Infraestructura:** Postgres administrado en vez de SQLite + volume si
+  hubiera que escalar a múltiples instancias, usuario no-root en el
+  Dockerfile, CI también para el frontend, health check con liveness/
+  readiness separados.
+
+> Detalle completo, con el motivo de cada decisión, en
+> [`docs/mejoras-futuras.md`](docs/mejoras-futuras.md).
+
+---
+
 ## Modelo de datos
+
+[↑ volver al índice](#índice)
 
 ```
 Paciente( Id, Nombre, Apellido, Telefono, ObraSocial, CreatedAt, DeletedAt? )
@@ -158,6 +316,8 @@ Decisiones de modelado:
 ---
 
 ## API
+
+[↑ volver al índice](#índice)
 
 Prefijo `/api`. Todas las rutas requieren `Authorization: Bearer <access token>`
 excepto `POST /auth/login` y `POST /auth/refresh`.
@@ -262,6 +422,8 @@ Cuerpo de error: `ProblemDetails` (RFC 7807).
 
 ## Autenticación y permisos
 
+[↑ volver al índice](#índice)
+
 ### Dos tokens
 
 |                | Access token (JWT)                                            | Refresh token                                                 |
@@ -319,6 +481,8 @@ instante (no es frontera de seguridad).
 
 ## Máquina de estados del turno
 
+[↑ volver al índice](#índice)
+
 ```
                          [Admin: cualquier flecha legal]
                          [Profesional: solo las marcadas *]
@@ -347,6 +511,8 @@ auditoría).
 
 ## Tiempo real (SignalR)
 
+[↑ volver al índice](#índice)
+
 Cada cambio de turno (crear, editar, cambiar estado) se empuja por WebSocket a
 `/hubs/turnos`, además de quedar disponible por polling vía la API REST normal:
 
@@ -362,6 +528,8 @@ Detalle de implementación (`TurnoHub`, `ITurnoNotifier`) en
 ---
 
 ## Flujos de uso
+
+[↑ volver al índice](#índice)
 
 ### Administrador
 
@@ -407,6 +575,8 @@ Detalle de implementación (`TurnoHub`, `ITurnoNotifier`) en
 
 ## Validaciones principales
 
+[↑ volver al índice](#índice)
+
 FluentValidation por request, corridas por un filtro global (`ValidationFilter`)
 que también revisa los errores de _binding_ de ASP.NET Core (JSON malformado,
 un enum que no matchea ningún nombre) — los dos caminos terminan en el mismo
@@ -438,6 +608,8 @@ un enum que no matchea ningún nombre) — los dos caminos terminan en el mismo
 
 ## Estructura del proyecto
 
+[↑ volver al índice](#índice)
+
 ```
 ├── backend/                    .NET 9 — solución Turnos.sln
 │   ├── src/
@@ -465,9 +637,15 @@ un enum que no matchea ningún nombre) — los dos caminos terminan en el mismo
 └── .github/workflows/          CI (build + test del backend)
 ```
 
+> Diagrama de arquitectura interactivo (deploy, frontend, backend, base de
+> datos y cómo se conectan) generado con [GitDiagram](https://gitdiagram.com):
+> [gitdiagram.com/Juanma7882/mini-sistema-de-gesti-n-de-turnos](https://gitdiagram.com/Juanma7882/mini-sistema-de-gesti-n-de-turnos)
+
 ---
 
 ## Más documentación
+
+[↑ volver al índice](#índice)
 
 Este README es el contrato: qué existe, cómo se usa, y qué decisiones de
 modelado son visibles desde afuera (endpoints, DTOs, roles, estados). El

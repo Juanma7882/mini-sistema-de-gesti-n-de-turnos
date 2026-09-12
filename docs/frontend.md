@@ -98,4 +98,4 @@ rol **Paciente** NO entra acá (ver `openspec/changes/add-patient-self-service/t
 ## 11. Documentación
 
 - [x] 11.1 Sección "Frontend" en el bloque "Cómo correr localmente" del `README.md`.
-- [ ] 11.2 Aportar los prompts de IA usados en el front a `docs/uso-de-ia.md`. **Pendiente real** — ese documento hoy solo cubre el backend.
+- [x] 11.2 Aportar el uso de IA del front a `docs/uso-de-ia.md` (sección "Frontend").

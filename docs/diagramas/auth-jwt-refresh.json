@@ -1,0 +1,197 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Login, expiración y refresh del token",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1080,
+      650
+    ],
+    "column_fit": "spread"
+  },
+  "participants": [
+    {
+      "id": "spa",
+      "type": "frontend",
+      "label": "React SPA",
+      "sublabel": "token en memoria"
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "Turnos.Api",
+      "sublabel": "AuthController"
+    },
+    {
+      "id": "tokens",
+      "type": "security",
+      "label": "Tokens",
+      "sublabel": "BCrypt · JWT HS256"
+    },
+    {
+      "id": "db",
+      "type": "database",
+      "label": "SQLite",
+      "sublabel": "RefreshToken"
+    }
+  ],
+  "segments": [
+    {
+      "from": 150,
+      "to": 230,
+      "label": "Login"
+    },
+    {
+      "from": 244,
+      "to": 440,
+      "label": "Vence, refresca y reintenta"
+    }
+  ],
+  "messages": [
+    {
+      "id": "post-login",
+      "from": "spa",
+      "to": "api",
+      "y": 160,
+      "label": "POST /auth/login",
+      "variant": "emphasis"
+    },
+    {
+      "id": "verifica-hash",
+      "from": "api",
+      "to": "tokens",
+      "y": 188,
+      "label": "BCrypt.Verify + emite JWT",
+      "variant": "security"
+    },
+    {
+      "id": "respuesta-login",
+      "from": "api",
+      "to": "spa",
+      "y": 216,
+      "label": "200 + Set-Cookie rt",
+      "variant": "return"
+    },
+    {
+      "id": "pide-turnos",
+      "from": "spa",
+      "to": "api",
+      "y": 252,
+      "label": "GET /turnos · Bearer",
+      "variant": "emphasis"
+    },
+    {
+      "id": "token-vencido",
+      "from": "api",
+      "to": "spa",
+      "y": 280,
+      "label": "401 token vencido",
+      "variant": "return"
+    },
+    {
+      "id": "post-refresh",
+      "from": "spa",
+      "to": "api",
+      "y": 316,
+      "label": "POST /auth/refresh · cookie rt",
+      "variant": "security"
+    },
+    {
+      "id": "rota-token",
+      "from": "api",
+      "to": "db",
+      "y": 344,
+      "label": "revoca el usado, emite otro",
+      "variant": "default"
+    },
+    {
+      "id": "nuevo-access",
+      "from": "api",
+      "to": "spa",
+      "y": 372,
+      "label": "200 + Set-Cookie rt nuevo",
+      "variant": "return"
+    },
+    {
+      "id": "reintento",
+      "from": "spa",
+      "to": "api",
+      "y": 400,
+      "label": "reintenta GET /turnos",
+      "variant": "emphasis"
+    },
+    {
+      "id": "turnos-ok",
+      "from": "api",
+      "to": "spa",
+      "y": 428,
+      "label": "200 turnos",
+      "variant": "return"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "spa",
+      "from": 156,
+      "to": 434,
+      "type": "frontend"
+    },
+    {
+      "participant": "api",
+      "from": 160,
+      "to": 222,
+      "type": "backend"
+    },
+    {
+      "participant": "api",
+      "from": 252,
+      "to": 286,
+      "type": "backend"
+    },
+    {
+      "participant": "api",
+      "from": 316,
+      "to": 432,
+      "type": "backend"
+    },
+    {
+      "participant": "tokens",
+      "from": 183,
+      "to": 208,
+      "type": "security"
+    },
+    {
+      "participant": "db",
+      "from": 339,
+      "to": 354,
+      "type": "database"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Un login para los dos roles",
+      "items": [
+        "La diferencia vive en los claims: role, y profesionalId solo para el profesional",
+        "El cliente nunca manda su profesionalId — sale del token firmado por el servidor"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Dos tokens, dos vidas",
+      "items": [
+        "Access token JWT HS256 de ~15 min, guardado solo en memoria del cliente",
+        "Refresh opaco de ~14 días en cookie httpOnly, guardado hasheado SHA-256 en la base"
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Defensas del login",
+      "items": [
+        "Rate limit de 5 intentos por IP cada 60s: el sexto responde 429",
+        "Passwords con BCrypt; el hash nunca sale de Infrastructure"
+      ]
+    }
+  ]
+}

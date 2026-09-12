@@ -1,0 +1,170 @@
+{
+  "schema_version": 1,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "Máquina de estados del turno",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1040,
+      660
+    ]
+  },
+  "lanes": [
+    {
+      "id": "main",
+      "label": "Curso del turno"
+    },
+    {
+      "id": "conflicto",
+      "label": "Intento rechazado"
+    },
+    {
+      "id": "terminal",
+      "label": "Salida terminal"
+    }
+  ],
+  "states": [
+    {
+      "id": "alta",
+      "type": "start",
+      "label": "Alta del turno",
+      "sublabel": "POST /turnos",
+      "lane": "main",
+      "col": 0,
+      "step": "01",
+      "tag": "solo Admin"
+    },
+    {
+      "id": "pendiente",
+      "type": "active",
+      "label": "Pendiente",
+      "sublabel": "reserva el slot",
+      "lane": "main",
+      "col": 1,
+      "step": "02",
+      "tag": "Estado = 0"
+    },
+    {
+      "id": "confirmado",
+      "type": "active",
+      "label": "Confirmado",
+      "sublabel": "el profesional lo confirmó",
+      "lane": "main",
+      "col": 2,
+      "step": "03",
+      "tag": "Estado = 1"
+    },
+    {
+      "id": "atendido",
+      "type": "success",
+      "label": "Atendido",
+      "sublabel": "la consulta ya ocurrió",
+      "lane": "main",
+      "col": 3,
+      "step": "04",
+      "tag": "terminal · 3"
+    },
+    {
+      "id": "cancelado",
+      "type": "failure",
+      "label": "Cancelado",
+      "sublabel": "libera el slot",
+      "lane": "terminal",
+      "col": 0,
+      "tag": "terminal · 2"
+    },
+    {
+      "id": "e409",
+      "type": "failure",
+      "label": "409 Conflict",
+      "sublabel": "transición ilegal",
+      "lane": "conflicto",
+      "col": 1,
+      "tag": "ProblemDetails"
+    }
+  ],
+  "transitions": [
+    {
+      "id": "nace-pendiente",
+      "from": "alta",
+      "to": "pendiente",
+      "label": "nace Pendiente",
+      "variant": "security",
+      "fromSide": "right",
+      "toSide": "left",
+      "labelDy": -25
+    },
+    {
+      "id": "confirma",
+      "from": "pendiente",
+      "to": "confirmado",
+      "label": "PATCH → Confirmado",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left",
+      "labelDy": -26
+    },
+    {
+      "id": "atiende",
+      "from": "confirmado",
+      "to": "atendido",
+      "label": "PATCH → Atendido",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left",
+      "labelDy": -25
+    },
+    {
+      "id": "cancela-pendiente",
+      "from": "pendiente",
+      "to": "cancelado",
+      "label": "PATCH → Cancelado",
+      "fromSide": "bottom",
+      "toSide": "left",
+      "labelDy": -23
+    },
+    {
+      "id": "cancela-confirmado",
+      "from": "confirmado",
+      "to": "cancelado",
+      "label": "PATCH → Cancelado",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "route": "drop"
+    },
+    {
+      "id": "patch-en-terminal",
+      "from": "atendido",
+      "to": "e409",
+      "label": "cualquier PATCH",
+      "variant": "dashed",
+      "labelDy": 24
+    }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "Cancelar no es borrar",
+      "items": [
+        "No existe DELETE /turnos: cancelar es PATCH /turnos/{id}/estado con Cancelado",
+        "Al cancelar se libera el slot, porque el índice único parcial excluye ese estado"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Quién dispara qué",
+      "items": [
+        "MaquinaEstados.EsTransicionValida (Domain, función pura) define qué flechas existen",
+        "El profesional solo toca los suyos; un turno ajeno por id responde 404, no 403"
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Fuera del diagrama",
+      "items": [
+        "Cualquier transición que no esté dibujada responde 409 Conflict",
+        "Revertir un estado terminal queda como mejora futura, con auditoría"
+      ]
+    }
+  ]
+}

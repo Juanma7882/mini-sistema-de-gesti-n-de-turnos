@@ -1,7 +1,9 @@
 # Mejoras futuras
 
-Cosas identificadas pero deliberadamente fuera del alcance de esta entrega
-(deadline sábado 12/09/2026 22:30), con el motivo de dejarlas afuera.
+De las funcionalidades pedidas en la consigna, ninguna quedó pendiente —
+todas están implementadas y funcionando. Lo que sigue son mejoras
+adicionales identificadas pero deliberadamente fuera del alcance de esta
+entrega (deadline sábado 12/09/2026 22:30), con el motivo de dejarlas afuera.
 
 ## Seguridad y auth
 
@@ -49,8 +51,6 @@ Cosas identificadas pero deliberadamente fuera del alcance de esta entrega
   hooks `use<X>Query`). Funciona para el volumen de esta demo; con más
   pantallas compartiendo los mismos datos, una cache compartida evitaría
   refetches duplicados.
-- **Prompts de IA del frontend sin volcar a `docs/uso-de-ia.md`.** Ese
-  documento hoy solo cubre el backend (`frontend.md §11.2`).
 
 ## Infraestructura y operación
 

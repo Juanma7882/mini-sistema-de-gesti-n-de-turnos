@@ -1,0 +1,205 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Flujo de uso — Administrador y Profesional",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1080,
+      660
+    ],
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "frontend": {
+          "label": "Pantalla"
+        },
+        "backend": {
+          "label": "Endpoint"
+        },
+        "security": {
+          "label": "Auth y cortes"
+        }
+      }
+    }
+  },
+  "lanes": [
+    {
+      "id": "acceso",
+      "label": "Acceso"
+    },
+    {
+      "id": "admin",
+      "label": "Administrador"
+    },
+    {
+      "id": "profesional",
+      "label": "Profesional"
+    },
+    {
+      "id": "rechazos",
+      "label": "Respuesta del servidor",
+      "variant": "exception"
+    }
+  ],
+  "mainPath": [
+    "login",
+    "maestros",
+    "crear",
+    "gestiona"
+  ],
+  "nodes": [
+    {
+      "id": "login",
+      "lane": "acceso",
+      "col": 0,
+      "type": "security",
+      "label": "Login",
+      "sublabel": "POST /auth/login",
+      "tag": "misma pantalla"
+    },
+    {
+      "id": "maestros",
+      "lane": "admin",
+      "col": 1,
+      "type": "frontend",
+      "label": "Datos maestros",
+      "sublabel": "pacientes y profesionales",
+      "width": 130
+    },
+    {
+      "id": "crear",
+      "lane": "admin",
+      "col": 2,
+      "type": "backend",
+      "label": "Crear turno",
+      "sublabel": "POST /turnos",
+      "tag": "nace Pendiente"
+    },
+    {
+      "id": "gestiona",
+      "lane": "admin",
+      "col": 3,
+      "type": "backend",
+      "label": "Reprogramar",
+      "sublabel": "PUT /turnos/{id}"
+    },
+    {
+      "id": "misturnos",
+      "lane": "profesional",
+      "col": 2,
+      "type": "frontend",
+      "label": "Mis turnos",
+      "sublabel": "solo los suyos"
+    },
+    {
+      "id": "confirma",
+      "lane": "profesional",
+      "col": 3,
+      "type": "backend",
+      "label": "Confirmar",
+      "sublabel": "PATCH estado"
+    },
+    {
+      "id": "atiende",
+      "lane": "profesional",
+      "col": 4,
+      "type": "backend",
+      "label": "Atender",
+      "sublabel": "PATCH → Atendido"
+    },
+    {
+      "id": "rechazo",
+      "lane": "rechazos",
+      "col": 4,
+      "type": "security",
+      "label": "403 · 404 · 409",
+      "sublabel": "la API, no el front",
+      "width": 140
+    }
+  ],
+  "edges": [
+    {
+      "id": "entra-admin",
+      "from": "login",
+      "to": "maestros",
+      "label": "como Admin",
+      "variant": "security"
+    },
+    {
+      "id": "carga-maestros",
+      "from": "maestros",
+      "to": "crear",
+      "label": "elige paciente y horario"
+    },
+    {
+      "id": "mantiene",
+      "from": "crear",
+      "to": "gestiona",
+      "label": "reprograma o cancela"
+    },
+    {
+      "id": "entra-profesional",
+      "from": "login",
+      "to": "misturnos",
+      "label": "como Profesional",
+      "variant": "security"
+    },
+    {
+      "id": "push-signalr",
+      "from": "crear",
+      "to": "misturnos",
+      "label": "push SignalR",
+      "variant": "dashed",
+      "role": "async",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "confirma-turno",
+      "from": "misturnos",
+      "to": "confirma",
+      "label": "PATCH → Confirmado"
+    },
+    {
+      "id": "atiende-turno",
+      "from": "confirma",
+      "to": "atiende",
+      "label": "PATCH → Atendido"
+    },
+    {
+      "id": "corta",
+      "from": "misturnos",
+      "to": "rechazo",
+      "label": "fuera de lo suyo",
+      "variant": "security",
+      "role": "error"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Administrador",
+      "items": [
+        "Carga los datos maestros y es el único que crea turnos con POST /turnos",
+        "Reprograma con PUT, que revalida el slot, y cancela con PATCH estado"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Profesional",
+      "items": [
+        "Aterriza en Mis turnos, ya acotado por el servidor con el claim profesionalId",
+        "Lo único que puede cambiar es el estado: confirmar, atender o cancelar"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "La API es la fuente de verdad",
+      "items": [
+        "Un profesional que golpea un endpoint solo-Admin recibe 403",
+        "Un turno ajeno por id responde 404, no 403: no se filtra ni su existencia"
+      ]
+    }
+  ]
+}

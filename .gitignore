@@ -80,3 +80,10 @@ data/
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# ─────────────────────────────────────────────────────────────
+# Consigna de la prueba técnica (documento interno, no se publica)
+# ─────────────────────────────────────────────────────────────
+docs/consigna.md
+docs/guion-demo.md
+docs/guion-presentacion.md
